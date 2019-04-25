@@ -8,6 +8,8 @@
 
 #include <SDL_vulkan.h>
 
+#include "swapchain_vulkan.h"
+
 const char* requested_instance_extension_names[] = {
 #if SCEGFX_VALIDATION
   VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
@@ -642,6 +644,38 @@ scegfx_context_vulkan_terminate(scegfx_context_t* super)
   destroy_surface(this);
   destroy_instance(this);
   super->initialized = false;
+}
+
+scegfx_swapchain_t*
+scegfx_context_vulkan_create_swapchain(scegfx_context_t* super,
+                                       scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_swapchain_t* swapchain = NULL;
+  if (allocator == NULL)
+    swapchain = malloc(sizeof(scegfx_swapchain_vulkan_t));
+  else
+    swapchain = allocator->allocator_callback(
+      NULL, sizeof(scegfx_swapchain_vulkan_t), allocator->user_data);
+  memset(swapchain, 0, sizeof(scegfx_swapchain_vulkan_t));
+
+  swapchain->api_vtable = &scegfx_swapchain_api_vtable_vulkan;
+  swapchain->context = super;
+
+  return swapchain;
+}
+
+void
+scegfx_context_vulkan_destroy_swapchain(scegfx_context_t* this,
+                                        scegfx_swapchain_t* swapchain,
+                                        scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(swapchain);
+  } else {
+    allocator->allocator_callback(swapchain, 0, allocator->user_data);
+  }
 }
 
 bool

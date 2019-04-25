@@ -8,6 +8,7 @@
 #include <SDL2/SDL.h>
 
 #include <scegfx/context.h>
+#include <scegfx/swapchain.h>
 
 #if defined(EMSCRIPTEN)
 #include <emscripten/emscripten.h>
@@ -42,6 +43,7 @@ struct app_t {
   uint32_t frame_count;
   SDL_Window* window;
   scegfx_context_t* context;
+  scegfx_swapchain_t* swapchain;
 } app = {};
 
 args_t default_args = {
@@ -248,6 +250,13 @@ init_context()
 }
 
 void
+init_swapchain()
+{
+  app.swapchain = app.context->api_vtable->create_swapchain(app.context, NULL);
+  app.swapchain->api_vtable->initialize(app.swapchain);
+}
+
+void
 run_app()
 {
   app.frame_count = 0;
@@ -302,6 +311,8 @@ run_loop()
 void
 clean_up()
 {
+  app.swapchain->api_vtable->terminate(app.swapchain);
+  app.context->api_vtable->destroy_swapchain(app.context, app.swapchain, NULL);
   app.context->api_vtable->terminate(app.context);
   scegfx_context_destroy(app.context, NULL);
 
@@ -324,6 +335,7 @@ main(int argc, char* argv[])
   SDL_Init(SDL_INIT_VIDEO);
   create_window();
   init_context();
+  init_swapchain();
 
   run_app();
 

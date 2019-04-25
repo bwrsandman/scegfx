@@ -10,6 +10,8 @@
 #include <SDL_opengl.h>
 #include <SDL_video.h>
 
+#include "swapchain_opengl.h"
+
 #if defined(EMSCRIPTEN)
 thread_local EMSCRIPTEN_WEBGL_CONTEXT_HANDLE webgl_handle = 0;
 #else
@@ -196,6 +198,38 @@ scegfx_context_opengl_terminate(scegfx_context_t* super)
   SDL_GL_DeleteContext(sdl_handle);
 #endif
   super->initialized = false;
+}
+
+scegfx_swapchain_t*
+scegfx_context_opengl_create_swapchain(scegfx_context_t* this,
+                                       scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  scegfx_swapchain_t* swapchain = NULL;
+  if (allocator == NULL)
+    swapchain = malloc(sizeof(scegfx_swapchain_opengl_t));
+  else
+    swapchain = allocator->allocator_callback(
+      NULL, sizeof(scegfx_swapchain_opengl_t), allocator->user_data);
+  memset(swapchain, 0, sizeof(scegfx_swapchain_opengl_t));
+
+  swapchain->api_vtable = &scegfx_swapchain_api_vtable_gles;
+  swapchain->context = this;
+
+  return swapchain;
+}
+
+void
+scegfx_context_opengl_destroy_swapchain(scegfx_context_t* this,
+                                        scegfx_swapchain_t* swapchain,
+                                        scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(swapchain);
+  } else {
+    allocator->allocator_callback(swapchain, 0, allocator->user_data);
+  }
 }
 
 bool

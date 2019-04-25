@@ -34,17 +34,31 @@ include(GNUInstallDirs)
 file(
   GLOB SOURCE_FILES
   include/scegfx/allocator.h
+  include/scegfx/common.h
   include/scegfx/context.h
+  include/scegfx/swapchain.h
   src/context.c
   src/backend/opengl/context_opengl.h
   src/backend/opengl/context_opengl.c
+  src/backend/opengl/swapchain_opengl.h
+  src/backend/opengl/swapchain_opengl.c
 )
 
-file(GLOB WEBGPU_SOURCE_FILES src/backend/webgpu/context_webgpu.h
-                              src/backend/webgpu/context_webgpu.c)
+file(
+  GLOB WEBGPU_SOURCE_FILES
+  src/backend/webgpu/context_webgpu.h
+  src/backend/webgpu/context_webgpu.c
+  src/backend/webgpu/swapchain_webgpu.h
+  src/backend/webgpu/swapchain_webgpu.c
+)
 
-file(GLOB VULKAN_SOURCE_FILES src/backend/vulkan/context_vulkan.h
-                              src/backend/vulkan/context_vulkan.c)
+file(
+  GLOB VULKAN_SOURCE_FILES
+  src/backend/vulkan/context_vulkan.h
+  src/backend/vulkan/context_vulkan.c
+  src/backend/vulkan/swapchain_vulkan.h
+  src/backend/vulkan/swapchain_vulkan.c
+)
 
 set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
