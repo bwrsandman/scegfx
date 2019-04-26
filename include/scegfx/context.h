@@ -16,6 +16,7 @@ typedef struct scegfx_device_memory_allocate_info_t
   scegfx_device_memory_allocate_info_t;
 typedef struct scegfx_device_memory_requirements_t
   scegfx_device_memory_requirements_t;
+typedef struct scegfx_image_t scegfx_image_t;
 typedef struct scegfx_mapped_device_memory_range_t
   scegfx_mapped_device_memory_range_t;
 typedef struct scegfx_fence_t scegfx_fence_t;
@@ -91,12 +92,26 @@ typedef struct scegfx_context_api_vtable_t
                              scegfx_buffer_t* buffer,
                              scegfx_device_memory_t* memory,
                              scegfx_device_size_t memory_offset);
+  bool (*bind_image_memory)(scegfx_context_t* this,
+                            scegfx_image_t* image,
+                            scegfx_device_memory_t* memory,
+                            scegfx_device_size_t memory_offset);
 
   scegfx_swapchain_t* (*create_swapchain)(scegfx_context_t* this,
                                           scegfx_allocator_t* allocator);
   void (*destroy_swapchain)(scegfx_context_t* this,
                             scegfx_swapchain_t* swapchain,
                             scegfx_allocator_t* allocator);
+
+  scegfx_image_t* (*create_image)(scegfx_context_t* this,
+                                  scegfx_allocator_t* allocator);
+  void (*destroy_image)(scegfx_context_t* this,
+                        scegfx_image_t* image,
+                        scegfx_allocator_t* allocator);
+  void (*get_image_memory_requirements)(
+    const scegfx_context_t* this,
+    const scegfx_image_t* image,
+    scegfx_device_memory_requirements_t* memory_requirements);
 
   bool (*make_current)(scegfx_context_t* this);
 } scegfx_context_api_vtable_t;

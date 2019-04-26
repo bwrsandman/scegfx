@@ -104,6 +104,11 @@ scegfx_context_vulkan_bind_buffer_memory(scegfx_context_t* this,
                                          scegfx_buffer_t* buffer,
                                          scegfx_device_memory_t* memory,
                                          scegfx_device_size_t memory_offset);
+bool
+scegfx_context_vulkan_bind_image_memory(scegfx_context_t* this,
+                                        scegfx_image_t* image,
+                                        scegfx_device_memory_t* memory,
+                                        scegfx_device_size_t memory_offset);
 
 scegfx_swapchain_t*
 scegfx_context_vulkan_create_swapchain(scegfx_context_t* this,
@@ -129,6 +134,19 @@ scegfx_context_vulkan_destroy_semaphore(scegfx_context_t* this,
                                         scegfx_semaphore_t* semaphore,
                                         scegfx_allocator_t* allocator);
 
+scegfx_image_t*
+scegfx_context_vulkan_create_image(scegfx_context_t* this,
+                                   scegfx_allocator_t* allocator);
+void
+scegfx_context_vulkan_destroy_image(scegfx_context_t* this,
+                                    scegfx_image_t* image,
+                                    scegfx_allocator_t* allocator);
+void
+scegfx_context_vulkan_get_image_memory_requirements(
+  const scegfx_context_t* this,
+  const scegfx_image_t* image,
+  scegfx_device_memory_requirements_t* memory_requirements);
+
 bool
 scegfx_context_vulkan_make_current(scegfx_context_t* this);
 
@@ -147,12 +165,17 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_vulkan = {
   .get_buffer_memory_requirements =
     scegfx_context_vulkan_get_buffer_memory_requirements,
   .bind_buffer_memory = scegfx_context_vulkan_bind_buffer_memory,
+  .bind_image_memory = scegfx_context_vulkan_bind_image_memory,
   .create_swapchain = scegfx_context_vulkan_create_swapchain,
   .destroy_swapchain = scegfx_context_vulkan_destroy_swapchain,
   .create_fence = scegfx_context_vulkan_create_fence,
   .destroy_fence = scegfx_context_vulkan_destroy_fence,
   .create_semaphore = scegfx_context_vulkan_create_semaphore,
   .destroy_semaphore = scegfx_context_vulkan_destroy_semaphore,
+  .create_image = scegfx_context_vulkan_create_image,
+  .destroy_image = scegfx_context_vulkan_destroy_image,
+  .get_image_memory_requirements =
+    scegfx_context_vulkan_get_image_memory_requirements,
   .make_current = scegfx_context_vulkan_make_current,
 };
 

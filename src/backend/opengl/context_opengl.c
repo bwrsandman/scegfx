@@ -13,6 +13,7 @@
 #include "buffer_opengl.h"
 #include "device_memory_opengl.h"
 #include "fence_opengl.h"
+#include "image_opengl.h"
 #include "semaphore_opengl.h"
 #include "swapchain_opengl.h"
 
@@ -527,6 +528,32 @@ scegfx_context_opengl_bind_buffer_memory(scegfx_context_t* super,
   return buffer_gl->handle != 0;
 }
 
+bool
+scegfx_context_opengl_bind_image_memory(scegfx_context_t* super,
+                                        scegfx_image_t* image,
+                                        scegfx_device_memory_t* memory,
+                                        scegfx_device_size_t memory_offset)
+{
+  assert(super->initialized);
+  assert(memory);
+  assert(memory_offset == 0);
+  scegfx_image_opengl_t* image_gl = (scegfx_image_opengl_t*)image;
+
+  glBindTexture(image_gl->target, image_gl->handle);
+  glTexImage2D(image_gl->target,
+               0,
+               image_gl->format,
+               image_gl->super.extent.width,
+               image_gl->super.extent.height,
+               0,
+               image_gl->format,
+               image_gl->type,
+               NULL);
+  glBindTexture(image_gl->target, 0);
+
+  return true;
+}
+
 scegfx_swapchain_t*
 scegfx_context_opengl_create_swapchain(scegfx_context_t* super,
                                        scegfx_allocator_t* allocator)
@@ -557,6 +584,86 @@ scegfx_context_opengl_destroy_swapchain(scegfx_context_t* this,
   } else {
     allocator->allocator_callback(swapchain, 0, allocator->user_data);
   }
+}
+
+scegfx_image_t*
+scegfx_context_opengl_create_image(scegfx_context_t* super,
+                                   scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_image_t* image = NULL;
+  if (allocator == NULL)
+    image = malloc(sizeof(scegfx_image_opengl_t));
+  else
+    image = allocator->allocator_callback(
+      NULL, sizeof(scegfx_image_opengl_t), allocator->user_data);
+  memset(image, 0, sizeof(scegfx_image_opengl_t));
+
+  image->api_vtable = &scegfx_image_api_vtable_opengl;
+  image->context = super;
+
+  return image;
+}
+
+void
+scegfx_context_opengl_destroy_image(scegfx_context_t* this,
+                                    scegfx_image_t* image,
+                                    scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(image);
+  } else {
+    allocator->allocator_callback(image, 0, allocator->user_data);
+  }
+}
+
+void
+scegfx_context_opengl_get_image_memory_requirements(
+  const scegfx_context_t* super,
+  const scegfx_image_t* image,
+  scegfx_device_memory_requirements_t* memory_requirements)
+{
+  assert(super->initialized);
+  assert(image);
+  assert(image->initialized);
+  const scegfx_image_opengl_t* image_gl = (const scegfx_image_opengl_t*)image;
+  const uint32_t dim = image_gl->super.extent.width *
+                       image_gl->super.extent.height *
+                       image_gl->super.extent.depth;
+
+  scegfx_device_size_t format_size = 0;
+  switch (image_gl->super.format) {
+    case scegfx_format_s8_uint:
+      format_size = 0x08;
+      break;
+    case scegfx_format_d16_unorm_s8_uint:
+      format_size = 0x18;
+      break;
+    case scegfx_format_r8g8b8a8_unorm:
+    case scegfx_format_d32_sfloat:
+    case scegfx_format_d24_unorm_s8_uint:
+      format_size = 0x20;
+      break;
+    case scegfx_format_d32_unorm_s8_uint:
+      format_size = 0x28;
+      break;
+    case scegfx_format_r32g32_sfloat:
+      format_size = 0x40;
+      break;
+    case scegfx_format_r32g32b32_sfloat:
+      format_size = 0x60;
+      break;
+    case scegfx_format_r32g32b32a32_sfloat:
+      format_size = 0x80;
+      break;
+    default:
+      assert(false);
+      break;
+  }
+
+  memory_requirements->size = dim * format_size;
+  memory_requirements->memory_type_bits = image_gl->super.format;
 }
 
 bool

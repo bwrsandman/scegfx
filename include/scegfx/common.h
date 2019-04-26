@@ -9,6 +9,19 @@
 
 typedef uint64_t scegfx_device_size_t;
 
+typedef enum scegfx_format_t
+{
+  scegfx_format_r8g8b8a8_unorm = 37,
+  scegfx_format_r32g32_sfloat = 103,
+  scegfx_format_r32g32b32_sfloat = 106,
+  scegfx_format_r32g32b32a32_sfloat = 109,
+  scegfx_format_d32_sfloat = 126,
+  scegfx_format_s8_uint = 127,
+  scegfx_format_d16_unorm_s8_uint = 128,
+  scegfx_format_d24_unorm_s8_uint = 129,
+  scegfx_format_d32_unorm_s8_uint = 130,
+} scegfx_format_t;
+
 typedef enum scegfx_memory_properties_t
 {
   scegfx_memory_properties_device_local = 0x0001u,
@@ -18,6 +31,19 @@ typedef enum scegfx_memory_properties_t
   scegfx_memory_properties_lazily_allocated = 0x0010u,
   scegfx_memory_properties_protected = 0x0020u,
 } scegfx_memory_properties_t;
+
+typedef enum scegfx_image_layout_t
+{
+  scegfx_image_layout_undefined = 0,
+  scegfx_image_layout_general = 1,
+  scegfx_image_layout_color_attachment_optimal = 2,
+  scegfx_image_layout_depth_stencil_attachment_optimal = 3,
+  scegfx_image_layout_depth_stencil_read_only_optimal = 4,
+  scegfx_image_layout_shader_read_only_optimal = 5,
+  scegfx_image_layout_transfer_src_optimal = 6,
+  scegfx_image_layout_transfer_dst_optimal = 7,
+  scegfx_image_layout_preinitialized = 8,
+} scegfx_image_layout_t;
 
 typedef struct scegfx_offset_2d_t
 {

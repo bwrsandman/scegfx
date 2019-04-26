@@ -80,11 +80,29 @@ scegfx_context_opengl_get_buffer_memory_requirements(
   const scegfx_buffer_t* buffer,
   scegfx_device_memory_requirements_t* memory_requirements);
 
+scegfx_image_t*
+scegfx_context_opengl_create_image(scegfx_context_t* this,
+                                   scegfx_allocator_t* allocator);
+void
+scegfx_context_opengl_destroy_image(scegfx_context_t* this,
+                                    scegfx_image_t* image,
+                                    scegfx_allocator_t* allocator);
+void
+scegfx_context_opengl_get_image_memory_requirements(
+  const scegfx_context_t* this,
+  const scegfx_image_t* image,
+  scegfx_device_memory_requirements_t* memory_requirements);
+
 bool
 scegfx_context_opengl_bind_buffer_memory(scegfx_context_t* this,
                                          scegfx_buffer_t* buffer,
                                          scegfx_device_memory_t* memory,
                                          scegfx_device_size_t memory_offset);
+bool
+scegfx_context_opengl_bind_image_memory(scegfx_context_t* this,
+                                        scegfx_image_t* image,
+                                        scegfx_device_memory_t* memory,
+                                        scegfx_device_size_t memory_offset);
 
 scegfx_swapchain_t*
 scegfx_context_opengl_create_swapchain(scegfx_context_t* this,
@@ -127,7 +145,12 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_opengl = {
   .destroy_buffer = scegfx_context_opengl_destroy_buffer,
   .get_buffer_memory_requirements =
     scegfx_context_opengl_get_buffer_memory_requirements,
+  .create_image = scegfx_context_opengl_create_image,
+  .destroy_image = scegfx_context_opengl_destroy_image,
+  .get_image_memory_requirements =
+    scegfx_context_opengl_get_image_memory_requirements,
   .bind_buffer_memory = scegfx_context_opengl_bind_buffer_memory,
+  .bind_image_memory = scegfx_context_opengl_bind_image_memory,
   .create_swapchain = scegfx_context_opengl_create_swapchain,
   .destroy_swapchain = scegfx_context_opengl_destroy_swapchain,
   .create_fence = scegfx_context_opengl_create_fence,

@@ -588,6 +588,7 @@ void
 destroy_device(scegfx_context_vulkan_t* this)
 {
   vkDestroyDevice(this->device, NULL);
+  this->device = NULL;
 }
 
 bool
@@ -928,6 +929,23 @@ scegfx_context_vulkan_bind_buffer_memory(scegfx_context_t* super,
   return result == VK_SUCCESS;
 }
 
+bool
+scegfx_context_vulkan_bind_image_memory(scegfx_context_t* super,
+                                        scegfx_image_t* image,
+                                        scegfx_device_memory_t* memory,
+                                        scegfx_device_size_t memory_offset)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+  const scegfx_image_vulkan_t* vk_image = (const scegfx_image_vulkan_t*)image;
+  scegfx_device_memory_vulkan_t* vk_memory =
+    (scegfx_device_memory_vulkan_t*)memory;
+
+  VkResult result = vkBindImageMemory(
+    this->device, vk_image->handle, vk_memory->handle, memory_offset);
+  return result == VK_SUCCESS;
+}
+
 scegfx_swapchain_t*
 scegfx_context_vulkan_create_swapchain(scegfx_context_t* super,
                                        scegfx_allocator_t* allocator)
@@ -958,6 +976,57 @@ scegfx_context_vulkan_destroy_swapchain(scegfx_context_t* this,
   } else {
     allocator->allocator_callback(swapchain, 0, allocator->user_data);
   }
+}
+
+scegfx_image_t*
+scegfx_context_vulkan_create_image(scegfx_context_t* this,
+                                   scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  scegfx_image_t* image = NULL;
+  if (allocator == NULL)
+    image = malloc(sizeof(scegfx_image_vulkan_t));
+  else
+    image = allocator->allocator_callback(
+      NULL, sizeof(scegfx_image_vulkan_t), allocator->user_data);
+  memset(image, 0, sizeof(scegfx_image_vulkan_t));
+
+  image->api_vtable = &scegfx_image_api_vtable_vulkan;
+  image->context = this;
+
+  return image;
+}
+
+void
+scegfx_context_vulkan_destroy_image(scegfx_context_t* this,
+                                    scegfx_image_t* image,
+                                    scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(image);
+  } else {
+    allocator->allocator_callback(image, 0, allocator->user_data);
+  }
+}
+
+void
+scegfx_context_vulkan_get_image_memory_requirements(
+  const scegfx_context_t* super,
+  const scegfx_image_t* image,
+  scegfx_device_memory_requirements_t* memory_requirements)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+  const scegfx_image_vulkan_t* vk_image = (const scegfx_image_vulkan_t*)image;
+
+  VkMemoryRequirements vk_memory_requirements;
+  vkGetImageMemoryRequirements(
+    this->device, vk_image->handle, &vk_memory_requirements);
+
+  memory_requirements->size = vk_memory_requirements.size;
+  memory_requirements->alignment = vk_memory_requirements.alignment;
+  memory_requirements->memory_type_bits = vk_memory_requirements.memoryTypeBits;
 }
 
 bool

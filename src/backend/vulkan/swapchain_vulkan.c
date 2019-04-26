@@ -106,14 +106,27 @@ scegfx_swapchain_vulkan_initialize(scegfx_swapchain_t* super)
                                   "Unable to create swapchain");
     return false;
   }
+  this->super.image_count = SCEGFX_MAX_SWAPCHAIN_COUNT;
+  VkImage images[SCEGFX_MAX_SWAPCHAIN_COUNT];
   res = vkGetSwapchainImagesKHR(
-    context->device, this->handle, &this->super.image_count, NULL);
+    context->device, this->handle, &this->super.image_count, images);
   if (res != VK_SUCCESS) {
     context->super.debug_callback(scegfx_debug_severity_error,
                                   __LINE__,
                                   FILE_BASENAME,
-                                  "Unable to get swapchain count");
+                                  "Unable to get swapchain images");
     return false;
+  }
+  for (uint32_t i = 0; i < this->super.image_count; ++i) {
+    this->images[i].super.api_vtable = &scegfx_image_api_vtable_vulkan;
+    this->images[i].super.context = this->super.context;
+    this->images[i].handle = images[i];
+    this->images[i].super.format =
+      (scegfx_format_t)context->surface_format.format;
+    this->images[i].super.extent.width = this->super.extent.width;
+    this->images[i].super.extent.height = this->super.extent.height;
+    this->images[i].super.extent.depth = 1;
+    this->images[i].super.initialized = true;
   }
   this->super.initialized = true;
   return true;
@@ -127,4 +140,13 @@ scegfx_swapchain_vulkan_terminate(scegfx_swapchain_t* super)
   scegfx_context_vulkan_t* context = (scegfx_context_vulkan_t*)super->context;
   vkDestroySwapchainKHR(context->device, this->handle, NULL);
   super->initialized = false;
+}
+
+scegfx_image_t*
+scegfx_swapchain_vulkan_get_image(scegfx_swapchain_t* super, uint32_t index)
+{
+  assert(super->initialized);
+  assert(index < super->image_count);
+  scegfx_swapchain_vulkan_t* this = (scegfx_swapchain_vulkan_t*)super;
+  return (scegfx_image_t*)&this->images[index];
 }

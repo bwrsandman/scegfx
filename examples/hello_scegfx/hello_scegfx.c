@@ -50,6 +50,7 @@ struct app_t {
   scegfx_fence_t* present_fence;
   scegfx_semaphore_t* acquire_semaphore;
   scegfx_semaphore_t* render_semaphore;
+  scegfx_image_t** swapchain_image;
 } app = {};
 
 args_t default_args = {
@@ -260,6 +261,13 @@ init_swapchain()
 {
   app.swapchain = app.context->api_vtable->create_swapchain(app.context, NULL);
   app.swapchain->api_vtable->initialize(app.swapchain);
+
+  app.swapchain_image =
+    malloc(sizeof(scegfx_image_t*) * app.swapchain->image_count);
+  for (uint32_t i = 0; i < app.swapchain->image_count; ++i) {
+    app.swapchain_image[i] =
+      app.swapchain->api_vtable->get_image(app.swapchain, i);
+  }
 }
 
 void
@@ -353,6 +361,8 @@ clean_up()
 
   SDL_DestroyWindow(app.window);
   SDL_Quit();
+
+  free(app.swapchain_image);
 }
 
 int

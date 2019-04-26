@@ -39,6 +39,7 @@ file(
   include/scegfx/context.h
   include/scegfx/device_memory.h
   include/scegfx/fence.h
+  include/scegfx/image.h
   include/scegfx/semaphore.h
   include/scegfx/swapchain.h
   src/context.c
@@ -49,6 +50,8 @@ file(
   src/backend/opengl/device_memory_opengl.h
   src/backend/opengl/fence_opengl.h
   src/backend/opengl/fence_opengl.c
+  src/backend/opengl/image_opengl.h
+  src/backend/opengl/image_opengl.c
   src/backend/opengl/semaphore_opengl.h
   src/backend/opengl/semaphore_opengl.c
   src/backend/opengl/swapchain_opengl.h
@@ -75,6 +78,8 @@ file(
   src/backend/vulkan/device_memory_vulkan.h
   src/backend/vulkan/fence_vulkan.h
   src/backend/vulkan/fence_vulkan.c
+  src/backend/vulkan/image_vulkan.h
+  src/backend/vulkan/image_vulkan.c
   src/backend/vulkan/semaphore_vulkan.h
   src/backend/vulkan/semaphore_vulkan.c
   src/backend/vulkan/swapchain_vulkan.h

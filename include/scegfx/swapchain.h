@@ -12,12 +12,15 @@
 
 typedef struct SDL_Window SDL_Window;
 typedef struct scegfx_context_t scegfx_context_t;
+typedef struct scegfx_image_t scegfx_image_t;
 typedef struct scegfx_swapchain_t scegfx_swapchain_t;
 
 typedef struct scegfx_swapchain_api_vtable_t
 {
   bool (*initialize)(scegfx_swapchain_t* this);
   void (*terminate)(scegfx_swapchain_t* this);
+
+  scegfx_image_t* (*get_image)(scegfx_swapchain_t* this, uint32_t index);
 } scegfx_swapchain_api_vtable_t;
 
 typedef struct scegfx_swapchain_t
