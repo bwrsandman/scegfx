@@ -15,6 +15,7 @@
 #include "fence_opengl.h"
 #include "image_opengl.h"
 #include "image_view_opengl.h"
+#include "render_pass_opengl.h"
 #include "sampler_opengl.h"
 #include "semaphore_opengl.h"
 #include "swapchain_opengl.h"
@@ -666,6 +667,38 @@ scegfx_context_opengl_get_image_memory_requirements(
 
   memory_requirements->size = dim * format_size;
   memory_requirements->memory_type_bits = image_gl->super.format;
+}
+
+scegfx_render_pass_t*
+scegfx_context_opengl_create_render_pass(scegfx_context_t* super,
+                                         scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_render_pass_t* render_pass = NULL;
+  if (allocator == NULL)
+    render_pass = malloc(sizeof(scegfx_render_pass_opengl_t));
+  else
+    render_pass = allocator->allocator_callback(
+      NULL, sizeof(scegfx_render_pass_opengl_t), allocator->user_data);
+  memset(render_pass, 0, sizeof(scegfx_render_pass_opengl_t));
+
+  render_pass->api_vtable = &scegfx_render_pass_api_vtable_opengl;
+  render_pass->context = super;
+
+  return render_pass;
+}
+
+void
+scegfx_context_opengl_destroy_render_pass(scegfx_context_t* this,
+                                          scegfx_render_pass_t* render_pass,
+                                          scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(render_pass);
+  } else {
+    allocator->allocator_callback(render_pass, 0, allocator->user_data);
+  }
 }
 
 scegfx_image_view_t*

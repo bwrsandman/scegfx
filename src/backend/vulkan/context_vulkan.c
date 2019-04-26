@@ -12,6 +12,7 @@
 #include "device_memory_vulkan.h"
 #include "fence_vulkan.h"
 #include "image_view_vulkan.h"
+#include "render_pass_vulkan.h"
 #include "sampler_vulkan.h"
 #include "semaphore_vulkan.h"
 #include "swapchain_vulkan.h"
@@ -1092,6 +1093,38 @@ scegfx_context_vulkan_destroy_sampler(scegfx_context_t* this,
     free(sampler);
   } else {
     allocator->allocator_callback(sampler, 0, allocator->user_data);
+  }
+}
+
+scegfx_render_pass_t*
+scegfx_vulkan_create_render_pass(scegfx_context_t* this,
+                                 scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  scegfx_render_pass_t* render_pass = NULL;
+  if (allocator == NULL)
+    render_pass = malloc(sizeof(scegfx_render_pass_vulkan_t));
+  else
+    render_pass = allocator->allocator_callback(
+      NULL, sizeof(scegfx_render_pass_vulkan_t), allocator->user_data);
+  memset(render_pass, 0, sizeof(scegfx_render_pass_vulkan_t));
+
+  render_pass->api_vtable = &scegfx_render_pass_api_vtable_vulkan;
+  render_pass->context = this;
+
+  return render_pass;
+}
+
+void
+scegfx_vulkan_destroy_render_pass(scegfx_context_t* this,
+                                  scegfx_render_pass_t* render_pass,
+                                  scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(render_pass);
+  } else {
+    allocator->allocator_callback(render_pass, 0, allocator->user_data);
   }
 }
 

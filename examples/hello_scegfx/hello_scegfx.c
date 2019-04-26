@@ -10,6 +10,7 @@
 #include <scegfx/context.h>
 #include <scegfx/fence.h>
 #include <scegfx/image_view.h>
+#include <scegfx/render_pass.h>
 #include <scegfx/semaphore.h>
 #include <scegfx/swapchain.h>
 
@@ -53,6 +54,7 @@ struct app_t {
   scegfx_semaphore_t* render_semaphore;
   scegfx_image_t** swapchain_image;
   scegfx_image_view_t** swapchain_image_view;
+  scegfx_render_pass_t* render_pass;
 } app = {};
 
 args_t default_args = {
@@ -297,6 +299,14 @@ init_synchronization_primitives()
 }
 
 void
+init_render_pass()
+{
+  app.render_pass =
+    app.context->api_vtable->create_render_pass(app.context, NULL);
+  app.render_pass->api_vtable->initialize(app.render_pass);
+}
+
+void
 run_app()
 {
   app.frame_count = 0;
@@ -360,6 +370,7 @@ clean_up()
     app.swapchain_image_view[i]->api_vtable->terminate(
       app.swapchain_image_view[i]);
   }
+  app.render_pass->api_vtable->terminate(app.render_pass);
 
   app.swapchain->api_vtable->terminate(app.swapchain);
 
@@ -373,6 +384,8 @@ clean_up()
     app.context->api_vtable->destroy_image_view(
       app.context, app.swapchain_image_view[i], NULL);
   }
+  app.context->api_vtable->destroy_render_pass(
+    app.context, app.render_pass, NULL);
 
   app.context->api_vtable->destroy_swapchain(app.context, app.swapchain, NULL);
 
@@ -403,6 +416,7 @@ main(int argc, char* argv[])
   init_context();
   init_swapchain();
   init_synchronization_primitives();
+  init_render_pass();
 
   run_app();
 
