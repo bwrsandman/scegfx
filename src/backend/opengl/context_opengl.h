@@ -14,6 +14,8 @@
 
 #include <scegfx/context.h>
 
+typedef struct sce_private_window_t sce_private_window_t;
+
 enum
 {
   SCEGFX_OPENGL_MAX_EXTENSION_STRING_SIZE = 64
@@ -151,6 +153,14 @@ scegfx_context_opengl_destroy_render_pass(scegfx_context_t* this,
                                           scegfx_render_pass_t* render_pass,
                                           scegfx_allocator_t* allocator);
 
+scegfx_framebuffer_t*
+scegfx_context_opengl_create_framebuffer(scegfx_context_t* this,
+                                         scegfx_allocator_t* allocator);
+void
+scegfx_context_opengl_destroy_framebuffer(scegfx_context_t* this,
+                                          scegfx_framebuffer_t* framebuffer,
+                                          scegfx_allocator_t* allocator);
+
 bool
 scegfx_context_opengl_make_current(scegfx_context_t* this);
 
@@ -186,6 +196,8 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_opengl = {
   .destroy_sampler = scegfx_context_opengl_destroy_sampler,
   .create_render_pass = scegfx_context_opengl_create_render_pass,
   .destroy_render_pass = scegfx_context_opengl_destroy_render_pass,
+  .create_framebuffer = scegfx_context_opengl_create_framebuffer,
+  .destroy_framebuffer = scegfx_context_opengl_destroy_framebuffer,
   .make_current = scegfx_context_opengl_make_current,
 };
 

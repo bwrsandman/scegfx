@@ -13,6 +13,7 @@
 #include "buffer_opengl.h"
 #include "device_memory_opengl.h"
 #include "fence_opengl.h"
+#include "framebuffer_opengl.h"
 #include "image_opengl.h"
 #include "image_view_opengl.h"
 #include "render_pass_opengl.h"
@@ -762,6 +763,38 @@ scegfx_context_opengl_destroy_sampler(scegfx_context_t* this,
     free(sampler);
   } else {
     allocator->allocator_callback(sampler, 0, allocator->user_data);
+  }
+}
+
+scegfx_framebuffer_t*
+scegfx_context_opengl_create_framebuffer(scegfx_context_t* super,
+                                         scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_framebuffer_t* framebuffer = NULL;
+  if (allocator == NULL)
+    framebuffer = malloc(sizeof(scegfx_framebuffer_opengl_t));
+  else
+    framebuffer = allocator->allocator_callback(
+      NULL, sizeof(scegfx_framebuffer_opengl_t), allocator->user_data);
+  memset(framebuffer, 0, sizeof(scegfx_framebuffer_opengl_t));
+
+  framebuffer->api_vtable = &scegfx_framebuffer_api_vtable_opengl;
+  framebuffer->context = super;
+
+  return framebuffer;
+}
+
+void
+scegfx_context_opengl_destroy_framebuffer(scegfx_context_t* this,
+                                          scegfx_framebuffer_t* framebuffer,
+                                          scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(framebuffer);
+  } else {
+    allocator->allocator_callback(framebuffer, 0, allocator->user_data);
   }
 }
 

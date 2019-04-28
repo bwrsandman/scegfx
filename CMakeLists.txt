@@ -39,6 +39,7 @@ file(
   include/scegfx/context.h
   include/scegfx/device_memory.h
   include/scegfx/fence.h
+  include/scegfx/framebuffer.h
   include/scegfx/image.h
   include/scegfx/image_view.h
   include/scegfx/render_pass.h
@@ -53,6 +54,8 @@ file(
   src/backend/opengl/device_memory_opengl.h
   src/backend/opengl/fence_opengl.h
   src/backend/opengl/fence_opengl.c
+  src/backend/opengl/framebuffer_opengl.h
+  src/backend/opengl/framebuffer_opengl.c
   src/backend/opengl/image_opengl.h
   src/backend/opengl/image_opengl.c
   src/backend/opengl/image_view_opengl.h
@@ -87,6 +90,8 @@ file(
   src/backend/vulkan/device_memory_vulkan.h
   src/backend/vulkan/fence_vulkan.h
   src/backend/vulkan/fence_vulkan.c
+  src/backend/vulkan/framebuffer_vulkan.h
+  src/backend/vulkan/framebuffer_vulkan.c
   src/backend/vulkan/image_vulkan.h
   src/backend/vulkan/image_vulkan.c
   src/backend/vulkan/image_view_vulkan.h

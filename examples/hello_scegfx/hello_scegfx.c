@@ -9,6 +9,7 @@
 
 #include <scegfx/context.h>
 #include <scegfx/fence.h>
+#include <scegfx/framebuffer.h>
 #include <scegfx/image_view.h>
 #include <scegfx/render_pass.h>
 #include <scegfx/semaphore.h>
@@ -54,6 +55,7 @@ struct app_t {
   scegfx_semaphore_t* render_semaphore;
   scegfx_image_t** swapchain_image;
   scegfx_image_view_t** swapchain_image_view;
+  scegfx_framebuffer_t** framebuffer;
   scegfx_render_pass_t* render_pass;
 } app = {};
 
@@ -284,6 +286,27 @@ init_swapchain()
 }
 
 void
+init_framebuffer()
+{
+  app.framebuffer =
+    malloc(sizeof(scegfx_framebuffer_t*) * app.swapchain->image_count);
+  for (uint32_t i = 0; i < app.swapchain->image_count; ++i) {
+    app.framebuffer[i] =
+      app.context->api_vtable->create_framebuffer(app.context, NULL);
+    {
+      scegfx_framebuffer_create_info_t info = {
+        .render_pass = app.render_pass,
+        .attachment_count = 1,
+        .attachments = &app.swapchain_image_view[i],
+        .width = app.swapchain->extent.width,
+        .height = app.swapchain->extent.height,
+      };
+      app.framebuffer[i]->api_vtable->initialize(app.framebuffer[i], &info);
+    }
+  }
+}
+
+void
 init_synchronization_primitives()
 {
   app.acquire_fence = app.context->api_vtable->create_fence(app.context, NULL);
@@ -369,6 +392,7 @@ clean_up()
   for (uint32_t i = 0; i < image_count; ++i) {
     app.swapchain_image_view[i]->api_vtable->terminate(
       app.swapchain_image_view[i]);
+    app.framebuffer[i]->api_vtable->terminate(app.framebuffer[i]);
   }
   app.render_pass->api_vtable->terminate(app.render_pass);
 
@@ -383,6 +407,8 @@ clean_up()
   for (uint32_t i = 0; i < image_count; ++i) {
     app.context->api_vtable->destroy_image_view(
       app.context, app.swapchain_image_view[i], NULL);
+    app.context->api_vtable->destroy_framebuffer(
+      app.context, app.framebuffer[i], NULL);
   }
   app.context->api_vtable->destroy_render_pass(
     app.context, app.render_pass, NULL);
@@ -397,6 +423,7 @@ clean_up()
 
   free(app.swapchain_image);
   free(app.swapchain_image_view);
+  free(app.framebuffer);
 }
 
 int
@@ -417,6 +444,7 @@ main(int argc, char* argv[])
   init_swapchain();
   init_synchronization_primitives();
   init_render_pass();
+  init_framebuffer();
 
   run_app();
 

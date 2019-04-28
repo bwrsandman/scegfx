@@ -11,6 +11,7 @@
 #include "buffer_vulkan.h"
 #include "device_memory_vulkan.h"
 #include "fence_vulkan.h"
+#include "framebuffer_vulkan.h"
 #include "image_view_vulkan.h"
 #include "render_pass_vulkan.h"
 #include "sampler_vulkan.h"
@@ -1125,6 +1126,38 @@ scegfx_vulkan_destroy_render_pass(scegfx_context_t* this,
     free(render_pass);
   } else {
     allocator->allocator_callback(render_pass, 0, allocator->user_data);
+  }
+}
+
+scegfx_framebuffer_t*
+scegfx_vulkan_create_framebuffer(scegfx_context_t* this,
+                                 scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  scegfx_framebuffer_t* framebuffer = NULL;
+  if (allocator == NULL)
+    framebuffer = malloc(sizeof(scegfx_framebuffer_vulkan_t));
+  else
+    framebuffer = allocator->allocator_callback(
+      NULL, sizeof(scegfx_framebuffer_vulkan_t), allocator->user_data);
+  memset(framebuffer, 0, sizeof(scegfx_framebuffer_vulkan_t));
+
+  framebuffer->api_vtable = &scegfx_framebuffer_api_vtable_vulkan;
+  framebuffer->context = this;
+
+  return framebuffer;
+}
+
+void
+scegfx_vulkan_destroy_framebuffer(scegfx_context_t* this,
+                                  scegfx_framebuffer_t* framebuffer,
+                                  scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(framebuffer);
+  } else {
+    allocator->allocator_callback(framebuffer, 0, allocator->user_data);
   }
 }
 
