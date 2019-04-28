@@ -11,6 +11,7 @@
 #include <SDL_video.h>
 
 #include "fence_opengl.h"
+#include "semaphore_opengl.h"
 #include "swapchain_opengl.h"
 
 #define GL_MAX_CLIENT_WAIT_TIMEOUT_WEBGL 0x9247
@@ -190,6 +191,9 @@ scegfx_context_opengl_initialize(scegfx_context_t* super)
   glGetInteger64v(GL_MAX_CLIENT_WAIT_TIMEOUT_WEBGL,
                   (int64_t*)&this->max_client_wait_timeout);
 #endif // defined(EMSCRIPTEN)
+  this->max_server_wait_timeout = 0;
+  glGetInteger64v(GL_MAX_SERVER_WAIT_TIMEOUT,
+                  (int64_t*)&this->max_server_wait_timeout);
 
   SDL_GL_SetSwapInterval(0);
 
@@ -241,6 +245,41 @@ scegfx_context_opengl_destroy_fence(scegfx_context_t* this,
     free(fence);
   } else {
     allocator->allocator_callback(fence, 0, allocator->user_data);
+  }
+}
+
+scegfx_semaphore_t*
+scegfx_context_opengl_create_semaphore(scegfx_context_t* super,
+                                       scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_context_opengl_t* this = (scegfx_context_opengl_t*)super;
+  scegfx_semaphore_t* semaphore = NULL;
+  if (allocator == NULL)
+    semaphore = malloc(sizeof(scegfx_semaphore_opengl_t));
+  else
+    semaphore = allocator->allocator_callback(
+      NULL, sizeof(scegfx_semaphore_opengl_t), allocator->user_data);
+  memset(semaphore, 0, sizeof(scegfx_semaphore_opengl_t));
+
+  semaphore->api_vtable = &scegfx_semaphore_api_vtable_opengl;
+  semaphore->context = super;
+  uint64_t* mutable_max_wait_timeout = (uint64_t*)&semaphore->max_wait_timeout;
+  *mutable_max_wait_timeout = this->max_server_wait_timeout;
+
+  return semaphore;
+}
+
+void
+scegfx_context_opengl_destroy_semaphore(scegfx_context_t* this,
+                                        scegfx_semaphore_t* semaphore,
+                                        scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(semaphore);
+  } else {
+    allocator->allocator_callback(semaphore, 0, allocator->user_data);
   }
 }
 

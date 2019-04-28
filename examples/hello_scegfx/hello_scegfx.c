@@ -9,6 +9,7 @@
 
 #include <scegfx/context.h>
 #include <scegfx/fence.h>
+#include <scegfx/semaphore.h>
 #include <scegfx/swapchain.h>
 
 #if defined(EMSCRIPTEN)
@@ -47,6 +48,8 @@ struct app_t {
   scegfx_swapchain_t* swapchain;
   scegfx_fence_t* acquire_fence;
   scegfx_fence_t* present_fence;
+  scegfx_semaphore_t* acquire_semaphore;
+  scegfx_semaphore_t* render_semaphore;
 } app = {};
 
 args_t default_args = {
@@ -266,6 +269,12 @@ init_synchronization_primitives()
   app.acquire_fence->api_vtable->initialize(app.acquire_fence, true);
   app.present_fence = app.context->api_vtable->create_fence(app.context, NULL);
   app.present_fence->api_vtable->initialize(app.present_fence, true);
+  app.acquire_semaphore =
+      app.context->api_vtable->create_semaphore(app.context, NULL);
+  app.acquire_semaphore->api_vtable->initialize(app.acquire_semaphore);
+  app.render_semaphore =
+      app.context->api_vtable->create_semaphore(app.context, NULL);
+  app.render_semaphore->api_vtable->initialize(app.render_semaphore);
 }
 
 void
@@ -325,11 +334,17 @@ clean_up()
 {
   app.acquire_fence->api_vtable->terminate(app.acquire_fence);
   app.present_fence->api_vtable->terminate(app.present_fence);
+  app.acquire_semaphore->api_vtable->terminate(app.acquire_semaphore);
+  app.render_semaphore->api_vtable->terminate(app.render_semaphore);
 
   app.swapchain->api_vtable->terminate(app.swapchain);
 
   app.context->api_vtable->destroy_fence(app.context, app.acquire_fence, NULL);
   app.context->api_vtable->destroy_fence(app.context, app.present_fence, NULL);
+  app.context->api_vtable->destroy_semaphore(
+    app.context, app.acquire_semaphore, NULL);
+  app.context->api_vtable->destroy_semaphore(
+    app.context, app.render_semaphore, NULL);
 
   app.context->api_vtable->destroy_swapchain(app.context, app.swapchain, NULL);
 

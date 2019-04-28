@@ -9,6 +9,7 @@
 #include <SDL_vulkan.h>
 
 #include "fence_vulkan.h"
+#include "semaphore_vulkan.h"
 #include "swapchain_vulkan.h"
 
 const char* requested_instance_extension_names[] = {
@@ -678,6 +679,40 @@ scegfx_context_vulkan_destroy_fence(scegfx_context_t* this,
     free(fence);
   } else {
     allocator->allocator_callback(fence, 0, allocator->user_data);
+  }
+}
+
+scegfx_semaphore_t*
+scegfx_context_vulkan_create_semaphore(scegfx_context_t* super,
+                                       scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_semaphore_t* semaphore = NULL;
+  if (allocator == NULL)
+    semaphore = malloc(sizeof(scegfx_semaphore_vulkan_t));
+  else
+    semaphore = allocator->allocator_callback(
+      NULL, sizeof(scegfx_semaphore_vulkan_t), allocator->user_data);
+  memset(semaphore, 0, sizeof(scegfx_semaphore_vulkan_t));
+
+  semaphore->api_vtable = &scegfx_semaphore_api_vtable_vulkan;
+  semaphore->context = super;
+  uint64_t* mutable_max_wait_timeout = (uint64_t*)&semaphore->max_wait_timeout;
+  *mutable_max_wait_timeout = UINT64_MAX;
+
+  return semaphore;
+}
+
+void
+scegfx_context_vulkan_destroy_semaphore(scegfx_context_t* this,
+                                        scegfx_semaphore_t* semaphore,
+                                        scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(semaphore);
+  } else {
+    allocator->allocator_callback(semaphore, 0, allocator->user_data);
   }
 }
 

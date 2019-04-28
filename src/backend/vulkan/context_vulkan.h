@@ -72,6 +72,14 @@ scegfx_context_vulkan_destroy_fence(scegfx_context_t* this,
                                     scegfx_fence_t* fence,
                                     scegfx_allocator_t* allocator);
 
+scegfx_semaphore_t*
+scegfx_context_vulkan_create_semaphore(scegfx_context_t* this,
+                                       scegfx_allocator_t* allocator);
+void
+scegfx_context_vulkan_destroy_semaphore(scegfx_context_t* this,
+                                        scegfx_semaphore_t* semaphore,
+                                        scegfx_allocator_t* allocator);
+
 bool
 scegfx_context_vulkan_make_current(scegfx_context_t* this);
 
@@ -82,6 +90,8 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_vulkan = {
   .destroy_swapchain = scegfx_context_vulkan_destroy_swapchain,
   .create_fence = scegfx_context_vulkan_create_fence,
   .destroy_fence = scegfx_context_vulkan_destroy_fence,
+  .create_semaphore = scegfx_context_vulkan_create_semaphore,
+  .destroy_semaphore = scegfx_context_vulkan_destroy_semaphore,
   .make_current = scegfx_context_vulkan_make_current,
 };
 
