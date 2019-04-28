@@ -8,6 +8,7 @@
 
 #include <SDL_vulkan.h>
 
+#include "fence_vulkan.h"
 #include "swapchain_vulkan.h"
 
 const char* requested_instance_extension_names[] = {
@@ -644,6 +645,40 @@ scegfx_context_vulkan_terminate(scegfx_context_t* super)
   destroy_surface(this);
   destroy_instance(this);
   super->initialized = false;
+}
+
+scegfx_fence_t*
+scegfx_context_vulkan_create_fence(scegfx_context_t* super,
+                                   scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_fence_t* fence = NULL;
+  if (allocator == NULL)
+    fence = malloc(sizeof(scegfx_fence_vulkan_t));
+  else
+    fence = allocator->allocator_callback(
+      NULL, sizeof(scegfx_fence_vulkan_t), allocator->user_data);
+  memset(fence, 0, sizeof(scegfx_fence_vulkan_t));
+
+  fence->api_vtable = &scegfx_fence_api_vtable_vulkan;
+  fence->context = super;
+  uint64_t* mutable_max_wait_timeout = (uint64_t*)&fence->max_wait_timeout;
+  *mutable_max_wait_timeout = UINT64_MAX;
+
+  return fence;
+}
+
+void
+scegfx_context_vulkan_destroy_fence(scegfx_context_t* this,
+                                    scegfx_fence_t* fence,
+                                    scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(fence);
+  } else {
+    allocator->allocator_callback(fence, 0, allocator->user_data);
+  }
 }
 
 scegfx_swapchain_t*

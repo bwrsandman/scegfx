@@ -10,7 +10,10 @@
 #include <SDL_opengl.h>
 #include <SDL_video.h>
 
+#include "fence_opengl.h"
 #include "swapchain_opengl.h"
+
+#define GL_MAX_CLIENT_WAIT_TIMEOUT_WEBGL 0x9247
 
 #if defined(EMSCRIPTEN)
 thread_local EMSCRIPTEN_WEBGL_CONTEXT_HANDLE webgl_handle = 0;
@@ -182,6 +185,12 @@ scegfx_context_opengl_initialize(scegfx_context_t* super)
                                this->extension_names[i]);
   }
 
+  this->max_client_wait_timeout = UINT64_MAX;
+#if defined(EMSCRIPTEN)
+  glGetInteger64v(GL_MAX_CLIENT_WAIT_TIMEOUT_WEBGL,
+                  (int64_t*)&this->max_client_wait_timeout);
+#endif // defined(EMSCRIPTEN)
+
   SDL_GL_SetSwapInterval(0);
 
   super->initialized = true;
@@ -198,6 +207,41 @@ scegfx_context_opengl_terminate(scegfx_context_t* super)
   SDL_GL_DeleteContext(sdl_handle);
 #endif
   super->initialized = false;
+}
+
+scegfx_fence_t*
+scegfx_context_opengl_create_fence(scegfx_context_t* super,
+                                   scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_context_opengl_t* this = (scegfx_context_opengl_t*)super;
+  scegfx_fence_t* fence = NULL;
+  if (allocator == NULL)
+    fence = malloc(sizeof(scegfx_fence_opengl_t));
+  else
+    fence = allocator->allocator_callback(
+      NULL, sizeof(scegfx_fence_opengl_t), allocator->user_data);
+  memset(fence, 0, sizeof(scegfx_fence_opengl_t));
+
+  fence->api_vtable = &scegfx_fence_api_vtable_opengl;
+  fence->context = super;
+  uint64_t* mutable_max_wait_timeout = (uint64_t*)&fence->max_wait_timeout;
+  *mutable_max_wait_timeout = this->max_client_wait_timeout;
+
+  return fence;
+}
+
+void
+scegfx_context_opengl_destroy_fence(scegfx_context_t* this,
+                                    scegfx_fence_t* fence,
+                                    scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(fence);
+  } else {
+    allocator->allocator_callback(fence, 0, allocator->user_data);
+  }
 }
 
 scegfx_swapchain_t*

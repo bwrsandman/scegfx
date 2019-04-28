@@ -8,6 +8,7 @@
 #include <SDL2/SDL.h>
 
 #include <scegfx/context.h>
+#include <scegfx/fence.h>
 #include <scegfx/swapchain.h>
 
 #if defined(EMSCRIPTEN)
@@ -44,6 +45,8 @@ struct app_t {
   SDL_Window* window;
   scegfx_context_t* context;
   scegfx_swapchain_t* swapchain;
+  scegfx_fence_t* acquire_fence;
+  scegfx_fence_t* present_fence;
 } app = {};
 
 args_t default_args = {
@@ -257,6 +260,15 @@ init_swapchain()
 }
 
 void
+init_synchronization_primitives()
+{
+  app.acquire_fence = app.context->api_vtable->create_fence(app.context, NULL);
+  app.acquire_fence->api_vtable->initialize(app.acquire_fence, true);
+  app.present_fence = app.context->api_vtable->create_fence(app.context, NULL);
+  app.present_fence->api_vtable->initialize(app.present_fence, true);
+}
+
+void
 run_app()
 {
   app.frame_count = 0;
@@ -311,8 +323,16 @@ run_loop()
 void
 clean_up()
 {
+  app.acquire_fence->api_vtable->terminate(app.acquire_fence);
+  app.present_fence->api_vtable->terminate(app.present_fence);
+
   app.swapchain->api_vtable->terminate(app.swapchain);
+
+  app.context->api_vtable->destroy_fence(app.context, app.acquire_fence, NULL);
+  app.context->api_vtable->destroy_fence(app.context, app.present_fence, NULL);
+
   app.context->api_vtable->destroy_swapchain(app.context, app.swapchain, NULL);
+
   app.context->api_vtable->terminate(app.context);
   scegfx_context_destroy(app.context, NULL);
 
@@ -336,6 +356,7 @@ main(int argc, char* argv[])
   create_window();
   init_context();
   init_swapchain();
+  init_synchronization_primitives();
 
   run_app();
 

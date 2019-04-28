@@ -9,6 +9,7 @@ typedef struct SDL_Window SDL_Window;
 typedef struct scegfx_private_window_t scegfx_private_window_t;
 typedef struct scegfx_allocator_t scegfx_allocator_t;
 typedef struct scegfx_context_t scegfx_context_t;
+typedef struct scegfx_fence_t scegfx_fence_t;
 typedef struct scegfx_swapchain_t scegfx_swapchain_t;
 
 typedef enum scegfx_backend_api_t
@@ -31,6 +32,12 @@ typedef struct scegfx_context_api_vtable_t
 {
   bool (*initialize)(scegfx_context_t* this);
   void (*terminate)(scegfx_context_t* this);
+
+  scegfx_fence_t* (*create_fence)(scegfx_context_t* this,
+                                  scegfx_allocator_t* allocator);
+  void (*destroy_fence)(scegfx_context_t* this,
+                        scegfx_fence_t* fence,
+                        scegfx_allocator_t* allocator);
 
   scegfx_swapchain_t* (*create_swapchain)(scegfx_context_t* this,
                                           scegfx_allocator_t* allocator);
