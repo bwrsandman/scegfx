@@ -35,6 +35,7 @@ file(
   GLOB SOURCE_FILES
   include/scegfx/allocator.h
   include/scegfx/buffer.h
+  include/scegfx/command_buffer.h
   include/scegfx/common.h
   include/scegfx/context.h
   include/scegfx/device_memory.h
@@ -49,6 +50,10 @@ file(
   src/context.c
   src/backend/opengl/buffer_opengl.h
   src/backend/opengl/buffer_opengl.c
+  src/backend/opengl/commands_opengl.h
+  src/backend/opengl/commands_opengl.c
+  src/backend/opengl/command_buffer_opengl.h
+  src/backend/opengl/command_buffer_opengl.c
   src/backend/opengl/context_opengl.h
   src/backend/opengl/context_opengl.c
   src/backend/opengl/device_memory_opengl.h
@@ -85,6 +90,8 @@ file(
   GLOB VULKAN_SOURCE_FILES
   src/backend/vulkan/buffer_vulkan.h
   src/backend/vulkan/buffer_vulkan.c
+  src/backend/vulkan/command_buffer_vulkan.h
+  src/backend/vulkan/command_buffer_vulkan.c
   src/backend/vulkan/context_vulkan.h
   src/backend/vulkan/context_vulkan.c
   src/backend/vulkan/device_memory_vulkan.h

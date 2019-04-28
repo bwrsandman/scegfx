@@ -10,6 +10,7 @@ typedef struct SDL_Window SDL_Window;
 
 typedef struct scegfx_allocator_t scegfx_allocator_t;
 typedef struct scegfx_buffer_t scegfx_buffer_t;
+typedef struct scegfx_command_buffer_t scegfx_command_buffer_t;
 typedef struct scegfx_context_t scegfx_context_t;
 typedef struct scegfx_device_memory_t scegfx_device_memory_t;
 typedef struct scegfx_device_memory_allocate_info_t
@@ -140,6 +141,13 @@ typedef struct scegfx_context_api_vtable_t
   void (*destroy_framebuffer)(scegfx_context_t* this,
                               scegfx_framebuffer_t* framebuffer,
                               scegfx_allocator_t* allocator);
+
+  scegfx_command_buffer_t* (*create_command_buffer)(
+    scegfx_context_t* this,
+    scegfx_allocator_t* allocator);
+  void (*destroy_command_buffer)(scegfx_context_t* this,
+                                 scegfx_command_buffer_t* command_buffer,
+                                 scegfx_allocator_t* allocator);
 
   bool (*make_current)(scegfx_context_t* this);
 } scegfx_context_api_vtable_t;

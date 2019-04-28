@@ -9,6 +9,7 @@
 #include <SDL_vulkan.h>
 
 #include "buffer_vulkan.h"
+#include "command_buffer_vulkan.h"
 #include "device_memory_vulkan.h"
 #include "fence_vulkan.h"
 #include "framebuffer_vulkan.h"
@@ -1158,6 +1159,41 @@ scegfx_vulkan_destroy_framebuffer(scegfx_context_t* this,
     free(framebuffer);
   } else {
     allocator->allocator_callback(framebuffer, 0, allocator->user_data);
+  }
+}
+
+scegfx_command_buffer_t*
+scegfx_context_vulkan_create_command_buffer(scegfx_context_t* super,
+                                            scegfx_allocator_t* allocator)
+{
+  if (!super->initialized)
+    return NULL;
+
+  scegfx_command_buffer_t* command_buffer;
+  if (allocator == NULL)
+    command_buffer = malloc(sizeof(scegfx_command_buffer_vulkan_t));
+  else
+    command_buffer = allocator->allocator_callback(
+      NULL, sizeof(scegfx_command_buffer_vulkan_t), allocator->user_data);
+  memset(command_buffer, 0, sizeof(scegfx_command_buffer_vulkan_t));
+
+  command_buffer->api_vtable = &scegfx_command_buffer_api_vtable_vulkan;
+  command_buffer->context = super;
+
+  return command_buffer;
+}
+
+void
+scegfx_context_vulkan_destroy_command_buffer(scegfx_context_t* super,
+                                             scegfx_command_buffer_t* queue,
+                                             scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  assert(!queue->initialized);
+  if (allocator == NULL) {
+    free(queue);
+  } else {
+    allocator->allocator_callback(queue, 0, allocator->user_data);
   }
 }
 

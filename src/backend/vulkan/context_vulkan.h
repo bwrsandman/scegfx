@@ -179,6 +179,14 @@ scegfx_vulkan_destroy_framebuffer(scegfx_context_t* this,
                                   scegfx_framebuffer_t* framebuffer,
                                   scegfx_allocator_t* allocator);
 
+scegfx_command_buffer_t*
+scegfx_context_vulkan_create_command_buffer(scegfx_context_t* super,
+                                            scegfx_allocator_t* allocator);
+void
+scegfx_context_vulkan_destroy_command_buffer(scegfx_context_t* super,
+                                             scegfx_command_buffer_t* queue,
+                                             scegfx_allocator_t* allocator);
+
 bool
 scegfx_context_vulkan_make_current(scegfx_context_t* this);
 
@@ -216,6 +224,8 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_vulkan = {
   .destroy_render_pass = scegfx_vulkan_destroy_render_pass,
   .create_framebuffer = scegfx_vulkan_create_framebuffer,
   .destroy_framebuffer = scegfx_vulkan_destroy_framebuffer,
+  .create_command_buffer = scegfx_context_vulkan_create_command_buffer,
+  .destroy_command_buffer = scegfx_context_vulkan_destroy_command_buffer,
   .make_current = scegfx_context_vulkan_make_current,
 };
 

@@ -7,6 +7,7 @@
 
 #include <SDL2/SDL.h>
 
+#include <scegfx/command_buffer.h>
 #include <scegfx/context.h>
 #include <scegfx/fence.h>
 #include <scegfx/framebuffer.h>
@@ -56,6 +57,7 @@ struct app_t {
   scegfx_image_t** swapchain_image;
   scegfx_image_view_t** swapchain_image_view;
   scegfx_framebuffer_t** framebuffer;
+  scegfx_command_buffer_t** cmd;
   scegfx_render_pass_t* render_pass;
 } app = {};
 
@@ -330,6 +332,45 @@ init_render_pass()
 }
 
 void
+encode_commands()
+{
+  app.cmd =
+    malloc(sizeof(scegfx_command_buffer_t*) * app.swapchain->image_count);
+
+  for (uint32_t i = 0; i < app.swapchain->image_count; ++i) {
+    app.cmd[i] =
+      app.context->api_vtable->create_command_buffer(app.context, NULL);
+
+    app.cmd[i]->api_vtable->initialize(app.cmd[i]);
+    app.cmd[i]->api_vtable->begin(app.cmd[i], true);
+    {
+      scegfx_render_pass_begin_info_t info = {
+          .render_area = {
+              .offset = {
+                  .x = 0,
+                  .y = 0,
+              },
+              .extent = app.swapchain->extent,
+          },
+          .clear_values = {
+              .color = {
+                  [0] = 0.3f,
+                  [1] = 0.4f,
+                  [2] = 0.4f,
+                  [3] = 1.0f,
+              },
+          },
+          .render_pass = app.render_pass,
+          .framebuffer = app.framebuffer[i],
+      };
+      app.cmd[i]->api_vtable->begin_render_pass(app.cmd[i], &info);
+    }
+    app.cmd[i]->api_vtable->end_render_pass(app.cmd[i]);
+    app.cmd[i]->api_vtable->end(app.cmd[i]);
+  }
+}
+
+void
 run_app()
 {
   app.frame_count = 0;
@@ -393,6 +434,7 @@ clean_up()
     app.swapchain_image_view[i]->api_vtable->terminate(
       app.swapchain_image_view[i]);
     app.framebuffer[i]->api_vtable->terminate(app.framebuffer[i]);
+    app.cmd[i]->api_vtable->terminate(app.cmd[i]);
   }
   app.render_pass->api_vtable->terminate(app.render_pass);
 
@@ -409,6 +451,8 @@ clean_up()
       app.context, app.swapchain_image_view[i], NULL);
     app.context->api_vtable->destroy_framebuffer(
       app.context, app.framebuffer[i], NULL);
+    app.context->api_vtable->destroy_command_buffer(
+      app.context, app.cmd[i], NULL);
   }
   app.context->api_vtable->destroy_render_pass(
     app.context, app.render_pass, NULL);
@@ -445,6 +489,8 @@ main(int argc, char* argv[])
   init_synchronization_primitives();
   init_render_pass();
   init_framebuffer();
+
+  encode_commands();
 
   run_app();
 
