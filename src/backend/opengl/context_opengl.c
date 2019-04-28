@@ -885,3 +885,59 @@ scegfx_context_opengl_make_current(scegfx_context_t* super)
 #endif
   return true;
 }
+
+bool
+scegfx_context_opengl_submit_to_queue(scegfx_context_t* super,
+                                      scegfx_submit_info_t* info,
+                                      scegfx_fence_t* fence)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_opengl_t* command_buffer =
+    (scegfx_command_buffer_opengl_t*)info->command_buffer;
+  scegfx_semaphore_opengl_t* signal_semaphore =
+    (scegfx_semaphore_opengl_t*)info->signal_semaphore;
+  scegfx_semaphore_opengl_t* wait_semaphore =
+    (scegfx_semaphore_opengl_t*)info->wait_semaphore;
+  scegfx_fence_opengl_t* fence_gl = (scegfx_fence_opengl_t*)fence;
+
+  // Insert a GPU wait in the command queue
+  if (wait_semaphore) {
+    assert(scegfx_semaphore_opengl_wait(wait_semaphore));
+  }
+
+  // Execute command buffer commands
+  assert(scegfx_command_buffer_opengl_execute(command_buffer));
+
+  // Unblock GPU wait in command queue
+  if (signal_semaphore) {
+    assert(scegfx_semaphore_opengl_signal(signal_semaphore));
+  }
+
+  // Insert CPU fence sync in the command queue
+  assert(scegfx_fence_opengl_signal(fence_gl));
+
+  // End of opengl commands
+  glFinish();
+  glFlush();
+
+  return true;
+}
+
+bool
+scegfx_context_opengl_present(scegfx_context_t* super,
+                              scegfx_present_info_t* info)
+{
+  assert(super->initialized);
+  scegfx_semaphore_opengl_t* wait_semaphore =
+    (scegfx_semaphore_opengl_t*)info->wait_semaphore;
+  assert(scegfx_semaphore_opengl_wait(wait_semaphore));
+  SDL_GL_SwapWindow(super->window_handle);
+  return true;
+}
+
+bool
+scegfx_context_opengl_wait_idle(scegfx_context_t* super)
+{
+  assert(super->initialized);
+  return true;
+}

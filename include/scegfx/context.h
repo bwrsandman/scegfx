@@ -44,6 +44,20 @@ typedef enum scegfx_debug_severity_t
   scegfx_debug_severity_error,
 } scegfx_debug_severity_t;
 
+typedef struct scegfx_submit_info_t
+{
+  scegfx_command_buffer_t* command_buffer;
+  scegfx_semaphore_t* wait_semaphore;
+  scegfx_semaphore_t* signal_semaphore;
+} scegfx_submit_info_t;
+
+typedef struct scegfx_present_info_t
+{
+  scegfx_semaphore_t* wait_semaphore;
+  scegfx_swapchain_t* swapchain;
+  uint32_t image_index;
+} scegfx_present_info_t;
+
 typedef struct scegfx_context_api_vtable_t
 {
   bool (*initialize)(scegfx_context_t* this);
@@ -150,6 +164,11 @@ typedef struct scegfx_context_api_vtable_t
                                  scegfx_allocator_t* allocator);
 
   bool (*make_current)(scegfx_context_t* this);
+  bool (*submit_to_queue)(scegfx_context_t* this,
+                          scegfx_submit_info_t* info,
+                          scegfx_fence_t* fence);
+  bool (*present)(scegfx_context_t* this, scegfx_present_info_t* info);
+  bool (*wait_idle)(scegfx_context_t* this);
 } scegfx_context_api_vtable_t;
 
 typedef void (*scegfx_debug_callback_t)(scegfx_debug_severity_t level,

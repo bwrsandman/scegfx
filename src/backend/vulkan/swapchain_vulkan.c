@@ -9,6 +9,8 @@
 #include <SDL_vulkan.h>
 
 #include "context_vulkan.h"
+#include "fence_vulkan.h"
+#include "semaphore_vulkan.h"
 
 bool
 scegfx_swapchain_vulkan_initialize(scegfx_swapchain_t* super)
@@ -149,4 +151,34 @@ scegfx_swapchain_vulkan_get_image(scegfx_swapchain_t* super, uint32_t index)
   assert(index < super->image_count);
   scegfx_swapchain_vulkan_t* this = (scegfx_swapchain_vulkan_t*)super;
   return (scegfx_image_t*)&this->images[index];
+}
+
+bool
+scegfx_swapchain_vulkan_acquire_next_image(scegfx_swapchain_t* super,
+                                           uint64_t timeout,
+                                           scegfx_semaphore_t* semaphore,
+                                           scegfx_fence_t* fence,
+                                           uint32_t* image_index)
+{
+  assert(super->initialized);
+  scegfx_swapchain_vulkan_t* this = (scegfx_swapchain_vulkan_t*)super;
+  scegfx_context_vulkan_t* context = (scegfx_context_vulkan_t*)super->context;
+  scegfx_semaphore_vulkan_t* semaphore_vk =
+    (scegfx_semaphore_vulkan_t*)semaphore;
+  scegfx_fence_vulkan_t* fence_vk = (scegfx_fence_vulkan_t*)fence;
+  VkResult result = vkAcquireNextImageKHR(context->device,
+                                          this->handle,
+                                          timeout,
+                                          semaphore_vk->handle,
+                                          fence_vk->handle,
+                                          image_index);
+  if (result != VK_SUCCESS) {
+    context->super.debug_callback(scegfx_debug_severity_error,
+                                  __LINE__,
+                                  FILE_BASENAME,
+                                  "Unable to acquire next image");
+    return false;
+  }
+
+  return true;
 }

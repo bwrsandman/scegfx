@@ -189,6 +189,15 @@ scegfx_context_vulkan_destroy_command_buffer(scegfx_context_t* super,
 
 bool
 scegfx_context_vulkan_make_current(scegfx_context_t* this);
+bool
+scegfx_context_vulkan_submit_to_queue(scegfx_context_t* this,
+                                      scegfx_submit_info_t* info,
+                                      scegfx_fence_t* fence);
+bool
+scegfx_context_vulkan_present(scegfx_context_t* this,
+                              scegfx_present_info_t* info);
+bool
+scegfx_context_vulkan_wait_idle(scegfx_context_t* this);
 
 static const scegfx_context_api_vtable_t scegfx_context_api_vtable_vulkan = {
   .initialize = scegfx_context_vulkan_initialize,
@@ -227,6 +236,9 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_vulkan = {
   .create_command_buffer = scegfx_context_vulkan_create_command_buffer,
   .destroy_command_buffer = scegfx_context_vulkan_destroy_command_buffer,
   .make_current = scegfx_context_vulkan_make_current,
+  .submit_to_queue = scegfx_context_vulkan_submit_to_queue,
+  .present = scegfx_context_vulkan_present,
+  .wait_idle = scegfx_context_vulkan_wait_idle,
 };
 
 #endif // SCEGFX_CONTEXT_VULKAN_H

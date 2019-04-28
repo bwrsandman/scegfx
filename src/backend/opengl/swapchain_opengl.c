@@ -7,7 +7,9 @@
 #include <assert.h>
 
 #include "context_opengl.h"
+#include "fence_opengl.h"
 #include "image_opengl.h"
+#include "semaphore_opengl.h"
 
 bool
 scegfx_swapchain_opengl_initialize(scegfx_swapchain_t* super)
@@ -56,3 +58,30 @@ scegfx_swapchain_opengl_get_image(scegfx_swapchain_t* super, uint32_t index)
 
   return (scegfx_image_t*)&this->image;
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wunused-variable"
+bool
+scegfx_swapchain_opengl_acquire_next_image(scegfx_swapchain_t* super,
+                                           uint64_t timeout,
+                                           scegfx_semaphore_t* semaphore,
+                                           scegfx_fence_t* fence,
+                                           uint32_t* image_index)
+{
+  assert(super->initialized);
+  scegfx_context_opengl_t* context = (scegfx_context_opengl_t*)super->context;
+  scegfx_semaphore_opengl_t* semaphore_gl =
+    (scegfx_semaphore_opengl_t*)semaphore;
+  scegfx_fence_opengl_t* fence_gl = (scegfx_fence_opengl_t*)fence;
+
+  // Unblock GPU wait in command queue
+  assert(scegfx_semaphore_opengl_signal(semaphore_gl));
+
+  // Insert CPU fence sync in the command queue
+  assert(scegfx_fence_opengl_signal(fence_gl));
+
+  *image_index = 0;
+  return true;
+}
+#pragma clang diagnostic pop

@@ -1203,3 +1203,105 @@ scegfx_context_vulkan_make_current(scegfx_context_t* super)
   assert(super->initialized);
   return true;
 }
+
+bool
+scegfx_context_vulkan_submit_to_queue(scegfx_context_t* super,
+                                      scegfx_submit_info_t* info,
+                                      scegfx_fence_t* fence)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+  scegfx_semaphore_vulkan_t* wait_semaphore =
+    (scegfx_semaphore_vulkan_t*)info->wait_semaphore;
+  scegfx_command_buffer_vulkan_t* command_buffer =
+    (scegfx_command_buffer_vulkan_t*)info->command_buffer;
+  scegfx_semaphore_vulkan_t* signal_semaphore =
+    (scegfx_semaphore_vulkan_t*)info->signal_semaphore;
+  scegfx_fence_vulkan_t* fence_vk = (scegfx_fence_vulkan_t*)fence;
+
+  VkSubmitInfo info_vk = {
+    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .commandBufferCount = 1,
+    .pCommandBuffers = &command_buffer->handle,
+  };
+
+  if (wait_semaphore) {
+    VkFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    info_vk.waitSemaphoreCount = 1;
+    info_vk.pWaitSemaphores = &wait_semaphore->handle;
+    info_vk.pWaitDstStageMask = &stageMask;
+  }
+
+  if (signal_semaphore) {
+    info_vk.signalSemaphoreCount = 1;
+    info_vk.pSignalSemaphores = &signal_semaphore->handle;
+  }
+
+  VkResult result =
+    vkQueueSubmit(this->present_graphics_compute_transfer_queue,
+                  1,
+                  &info_vk,
+                  fence_vk == NULL ? VK_NULL_HANDLE : fence_vk->handle);
+
+  if (result != VK_SUCCESS) {
+    this->super.debug_callback(scegfx_debug_severity_error,
+                               __LINE__,
+                               FILE_BASENAME,
+                               "Unable to submit to queue");
+    return false;
+  }
+
+  return true;
+}
+
+bool
+scegfx_context_vulkan_present(scegfx_context_t* super,
+                              scegfx_present_info_t* info)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+  scegfx_semaphore_vulkan_t* wait_semaphore =
+    (scegfx_semaphore_vulkan_t*)info->wait_semaphore;
+  scegfx_swapchain_vulkan_t* swapchain =
+    (scegfx_swapchain_vulkan_t*)info->swapchain;
+
+  VkPresentInfoKHR info_vk = {
+    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = &wait_semaphore->handle,
+    .swapchainCount = 1,
+    .pSwapchains = &swapchain->handle,
+    .pImageIndices = &info->image_index,
+  };
+  VkResult result =
+    vkQueuePresentKHR(this->present_graphics_compute_transfer_queue, &info_vk);
+
+  if (result != VK_SUCCESS) {
+    this->super.debug_callback(scegfx_debug_severity_error,
+                               __LINE__,
+                               FILE_BASENAME,
+                               "Unable to present to image");
+    return false;
+  }
+
+  return true;
+}
+
+bool
+scegfx_context_vulkan_wait_idle(scegfx_context_t* super)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+
+  VkResult result =
+    vkQueueWaitIdle(this->present_graphics_compute_transfer_queue);
+
+  if (result != VK_SUCCESS) {
+    this->super.debug_callback(scegfx_debug_severity_error,
+                               __LINE__,
+                               FILE_BASENAME,
+                               "Unable wait for queue to idle");
+    return false;
+  }
+  return true;
+}

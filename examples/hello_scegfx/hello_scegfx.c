@@ -416,6 +416,37 @@ run_loop()
 
   handle_keyboard();
 
+  uint32_t image_index = 0;
+  app.acquire_fence->api_vtable->wait(app.acquire_fence, app.acquire_fence->max_wait_timeout);
+  app.acquire_fence->api_vtable->reset(app.acquire_fence);
+  bool wait_result =
+    app.swapchain->api_vtable->acquire_next_image(app.swapchain,
+                                                  UINT64_MAX,
+                                                  app.acquire_semaphore,
+                                                  app.acquire_fence,
+                                                  &image_index);
+  assert(wait_result);
+  app.present_fence->api_vtable->wait(app.present_fence, app.present_fence->max_wait_timeout);
+  app.present_fence->api_vtable->reset(app.present_fence);
+  {
+    scegfx_submit_info_t info = {
+      .command_buffer = app.cmd[image_index],
+      .wait_semaphore = app.acquire_semaphore,
+      .signal_semaphore = app.render_semaphore,
+    };
+    app.context->api_vtable->submit_to_queue(
+      app.context, &info, app.present_fence);
+  }
+  {
+    scegfx_present_info_t info = {
+      .wait_semaphore = app.render_semaphore,
+      .swapchain = app.swapchain,
+      .image_index = image_index,
+    };
+    bool presented = app.context->api_vtable->present(app.context, &info);
+    assert(presented);
+  }
+
   ++app.frame_count;
   if (app.args.run_frames && app.frame_count >= app.args.run_frames_count) {
     app.quit = true;

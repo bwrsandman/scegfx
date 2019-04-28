@@ -171,6 +171,15 @@ scegfx_context_opengl_destroy_command_buffer(scegfx_context_t* super,
 
 bool
 scegfx_context_opengl_make_current(scegfx_context_t* this);
+bool
+scegfx_context_opengl_submit_to_queue(scegfx_context_t* this,
+                                      scegfx_submit_info_t* info,
+                                      scegfx_fence_t* fence);
+bool
+scegfx_context_opengl_present(scegfx_context_t* this,
+                              scegfx_present_info_t* info);
+bool
+scegfx_context_opengl_wait_idle(scegfx_context_t* this);
 
 static const scegfx_context_api_vtable_t scegfx_context_api_vtable_opengl = {
   .initialize = scegfx_context_opengl_initialize,
@@ -209,6 +218,9 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_opengl = {
   .create_command_buffer = scegfx_context_opengl_create_command_buffer,
   .destroy_command_buffer = scegfx_context_opengl_destroy_command_buffer,
   .make_current = scegfx_context_opengl_make_current,
+  .submit_to_queue = scegfx_context_opengl_submit_to_queue,
+  .present = scegfx_context_opengl_present,
+  .wait_idle = scegfx_context_opengl_wait_idle,
 };
 
 #endif // SCEGFX_CONTEXT_OPENGL_H

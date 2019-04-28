@@ -30,12 +30,19 @@ scegfx_swapchain_vulkan_terminate(scegfx_swapchain_t* this);
 
 scegfx_image_t*
 scegfx_swapchain_vulkan_get_image(scegfx_swapchain_t* this, uint32_t index);
+bool
+scegfx_swapchain_vulkan_acquire_next_image(scegfx_swapchain_t* this,
+                                           uint64_t timeout,
+                                           scegfx_semaphore_t* semaphore,
+                                           scegfx_fence_t* fence,
+                                           uint32_t* image_index);
 
 const static scegfx_swapchain_api_vtable_t
   scegfx_swapchain_api_vtable_vulkan = {
     .initialize = scegfx_swapchain_vulkan_initialize,
     .terminate = scegfx_swapchain_vulkan_terminate,
     .get_image = scegfx_swapchain_vulkan_get_image,
+    .acquire_next_image = scegfx_swapchain_vulkan_acquire_next_image,
   };
 
 #endif // SCEGFX_SWAPCHAIN_VULKAN_H
