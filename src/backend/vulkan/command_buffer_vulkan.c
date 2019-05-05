@@ -160,3 +160,40 @@ scegfx_command_buffer_vulkan_bind_pipeline(scegfx_command_buffer_t* super,
 
   vkCmdBindPipeline(this->handle, bind_point, pipeline_vk->handle);
 }
+
+void
+scegfx_command_buffer_vulkan_debug_marker_begin(
+  scegfx_command_buffer_t* super,
+  const scegfx_debug_marker_info_t* info)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_vulkan_t* this = (scegfx_command_buffer_vulkan_t*)super;
+  scegfx_context_vulkan_t* context = (scegfx_context_vulkan_t*)super->context;
+
+  if (context->functions.CmdDebugMarkerBegin == NULL) {
+    return;
+  }
+
+  VkDebugMarkerMarkerInfoEXT info_vk = {
+    .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+    .pMarkerName = info->name,
+    .color = { info->color[0], info->color[1], info->color[2], info->color[3] },
+  };
+
+  context->functions.CmdDebugMarkerBegin(this->handle, &info_vk);
+}
+
+void
+scegfx_command_buffer_vulkan_debug_marker_end(scegfx_command_buffer_t* super)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_vulkan_t* this = (scegfx_command_buffer_vulkan_t*)super;
+  scegfx_context_vulkan_t* context = (scegfx_context_vulkan_t*)super->context;
+
+  if (context->functions.CmdDebugMarkerBegin == NULL) {
+    return;
+  }
+
+  assert(context->functions.CmdDebugMarkerEnd);
+  context->functions.CmdDebugMarkerEnd(this->handle);
+}

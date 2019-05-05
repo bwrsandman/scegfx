@@ -196,6 +196,40 @@ scegfx_command_buffer_opengl_bind_pipeline(scegfx_command_buffer_t* super,
   ++this->count;
 }
 
+void
+scegfx_command_buffer_opengl_debug_marker_begin(
+  scegfx_command_buffer_t* super,
+  const scegfx_debug_marker_info_t* info)
+{
+  assert(super->initialized);
+  assert(info);
+#if !defined(EMSCRIPTEN)
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+
+  assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+
+  this->commands[this->count] = scegfx_command_opengl_debug_marker_begin;
+  this->args[this->count].debug_maker_info = *info;
+
+  ++this->count;
+#endif
+}
+
+void
+scegfx_command_buffer_opengl_debug_marker_end(scegfx_command_buffer_t* super)
+{
+  assert(super->initialized);
+#if !defined(EMSCRIPTEN)
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+
+  assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+
+  this->commands[this->count] = scegfx_command_opengl_debug_marker_end;
+
+  ++this->count;
+#endif
+}
+
 bool
 scegfx_command_buffer_opengl_execute(scegfx_command_buffer_opengl_t* this)
 {

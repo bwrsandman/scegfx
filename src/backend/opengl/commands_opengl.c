@@ -35,8 +35,6 @@ scegfx_command_end_render_pass_opengl(const scegfx_command_arg_t* arg)
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-#pragma clang diagnostic pop
-
 void
 scegfx_command_opengl_bind_pipeline(const scegfx_command_arg_t* arg)
 {
@@ -53,3 +51,18 @@ scegfx_command_opengl_bind_pipeline(const scegfx_command_arg_t* arg)
   assert(glIsProgram(arg->bind_pipeline.program));
   glUseProgram(arg->bind_pipeline.program);
 }
+
+void
+scegfx_command_opengl_debug_marker_begin(const scegfx_command_arg_t* arg)
+{
+  glPushDebugGroup(
+    GL_DEBUG_SOURCE_APPLICATION, 0, -1, arg->debug_maker_info.name);
+}
+
+void
+scegfx_command_opengl_debug_marker_end(const scegfx_command_arg_t* arg)
+{
+  glPopDebugGroup();
+}
+
+#pragma clang diagnostic pop

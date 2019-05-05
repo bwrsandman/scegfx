@@ -36,6 +36,7 @@ const char* requested_instance_layer_names[] = {
 
 const char* requested_device_extension_names[] = {
   VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+  VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
   VK_NV_RAY_TRACING_EXTENSION_NAME,
 };
 
@@ -382,6 +383,12 @@ get_device_procs(scegfx_context_vulkan_t* this)
   this->functions.CreateRayTracingPipelines =
     (PFN_vkCreateRayTracingPipelinesNV)vkGetDeviceProcAddr(
       this->device, "vkCreateRayTracingPipelines");
+  this->functions.CmdDebugMarkerBegin =
+    (PFN_vkCmdDebugMarkerBeginEXT)vkGetDeviceProcAddr(
+      this->device, "vkCmdDebugMarkerBeginEXT");
+  this->functions.CmdDebugMarkerEnd =
+    (PFN_vkCmdDebugMarkerEndEXT)vkGetDeviceProcAddr(this->device,
+                                                    "vkCmdDebugMarkerEndEXT");
 
   return true;
 }
@@ -677,6 +684,9 @@ scegfx_context_vulkan_initialize(scegfx_context_t* super)
     return false;
   }
   if (!create_device(this, physical_device)) {
+    return false;
+  }
+  if (!get_device_procs(this)) {
     return false;
   }
   if (!create_command_pool(this)) {

@@ -25,6 +25,8 @@ typedef struct scegfx_context_vulkan_t
   {
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormats;
     PFN_vkCreateRayTracingPipelinesNV CreateRayTracingPipelines;
+    PFN_vkCmdDebugMarkerBeginEXT CmdDebugMarkerBegin;
+    PFN_vkCmdDebugMarkerEndEXT CmdDebugMarkerEnd;
   } functions;
   uint32_t instance_extension_count;
   char instance_extension_names[SCEGFX_VULKAN_MAX_EXTENSION_COUNT]

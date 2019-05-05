@@ -48,6 +48,12 @@ void
 scegfx_command_buffer_opengl_bind_pipeline(scegfx_command_buffer_t* this,
                                            scegfx_pipeline_type_t type,
                                            const scegfx_pipeline_t* pipeline);
+void
+scegfx_command_buffer_opengl_debug_marker_begin(
+  scegfx_command_buffer_t* this,
+  const scegfx_debug_marker_info_t* info);
+void
+scegfx_command_buffer_opengl_debug_marker_end(scegfx_command_buffer_t* this);
 
 const static scegfx_command_buffer_api_vtable_t
   scegfx_command_buffer_api_vtable_opengl = {
@@ -58,6 +64,8 @@ const static scegfx_command_buffer_api_vtable_t
     .begin_render_pass = scegfx_command_buffer_opengl_begin_render_pass,
     .end_render_pass = scegfx_command_buffer_opengl_end_render_pass,
     .bind_pipeline = scegfx_command_buffer_opengl_bind_pipeline,
+    .debug_marker_begin = scegfx_command_buffer_opengl_debug_marker_begin,
+    .debug_marker_end = scegfx_command_buffer_opengl_debug_marker_end,
   };
 
 bool

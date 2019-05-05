@@ -24,6 +24,7 @@ typedef union scegfx_command_arg_t
       } graphics;
     };
   } bind_pipeline;
+  scegfx_debug_marker_info_t debug_maker_info;
 } scegfx_command_arg_t;
 
 typedef void (*scegfx_command_opengl_t)(const scegfx_command_arg_t* arg);
@@ -34,5 +35,9 @@ void
 scegfx_command_end_render_pass_opengl(const scegfx_command_arg_t* arg);
 void
 scegfx_command_opengl_bind_pipeline(const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_debug_marker_begin(const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_debug_marker_end(const scegfx_command_arg_t* arg);
 
 #endif // SCEGFX_COMMANDS_OPENGL_H
