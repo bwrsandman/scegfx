@@ -8,6 +8,7 @@
 
 #include <SDL_syswm.h>
 
+#include "buffer_webgpu.h"
 #include "swapchain_webgpu.h"
 
 bool
@@ -96,3 +97,101 @@ scegfx_context_webgpu_destroy_swapchain(scegfx_context_t* this,
     allocator->allocator_callback(swapchain, 0, allocator->user_data);
   }
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+uint32_t
+scegfx_context_webgpu_get_memory_type(scegfx_context_t* super,
+                                      uint32_t type_bits,
+                                      scegfx_memory_properties_t properties)
+{
+  return 0;
+}
+
+scegfx_device_memory_t*
+scegfx_context_webgpu_allocate_memory(
+  scegfx_context_t* super,
+  const scegfx_device_memory_allocate_info_t* info,
+  scegfx_allocator_t* allocator)
+{
+  return NULL;
+}
+
+void
+scegfx_context_webgpu_free_memory(scegfx_context_t* this,
+                                  scegfx_device_memory_t* memory,
+                                  scegfx_allocator_t* allocator)
+{}
+
+bool
+scegfx_context_webgpu_map_memory(scegfx_context_t* this,
+                                 scegfx_device_memory_t* memory,
+                                 scegfx_device_size_t offset,
+                                 scegfx_device_size_t size,
+                                 void** data)
+{
+  return 0;
+}
+
+void
+scegfx_context_webgpu_unmap_memory(scegfx_context_t* this,
+                                   scegfx_device_memory_t* memory)
+{}
+
+bool
+scegfx_context_webgpu_flush_mapped_memory_ranges(
+  scegfx_context_t* this,
+  uint32_t memory_range_count,
+  const scegfx_mapped_device_memory_range_t* memory_ranges)
+{
+  return 0;
+}
+
+scegfx_buffer_t*
+scegfx_context_webgpu_create_buffer(scegfx_context_t* this,
+                                    scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  scegfx_buffer_t* buffer = NULL;
+  if (allocator == NULL)
+    buffer = malloc(sizeof(scegfx_buffer_webgpu_t));
+  else
+    buffer = allocator->allocator_callback(
+      NULL, sizeof(scegfx_buffer_webgpu_t), allocator->user_data);
+  memset(buffer, 0, sizeof(scegfx_buffer_webgpu_t));
+
+  buffer->api_vtable = &scegfx_buffer_api_vtable_webgpu;
+  buffer->context = this;
+
+  return buffer;
+}
+
+void
+scegfx_context_webgpu_destroy_buffer(scegfx_context_t* this,
+                                     scegfx_buffer_t* buffer,
+                                     scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(buffer);
+  } else {
+    allocator->allocator_callback(buffer, 0, allocator->user_data);
+  }
+}
+
+void
+scegfx_context_webgpu_get_buffer_memory_requirements(
+  scegfx_context_t* this,
+  const scegfx_buffer_t* buffer,
+  scegfx_device_memory_requirements_t* memory_requirements)
+{}
+
+bool
+scegfx_context_webgpu_bind_buffer_memory(scegfx_context_t* this,
+                                         scegfx_buffer_t* buffer,
+                                         scegfx_device_memory_t* memory,
+                                         scegfx_device_size_t memory_offset)
+{
+  return 0;
+}
+#pragma clang diagnostic pop

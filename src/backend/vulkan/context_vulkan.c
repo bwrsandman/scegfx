@@ -8,6 +8,8 @@
 
 #include <SDL_vulkan.h>
 
+#include "buffer_vulkan.h"
+#include "device_memory_vulkan.h"
 #include "fence_vulkan.h"
 #include "semaphore_vulkan.h"
 #include "swapchain_vulkan.h"
@@ -541,6 +543,9 @@ create_device(scegfx_context_vulkan_t* this, VkPhysicalDevice physical_device)
          present_queue_family_index == compute_queue_family_index &&
          present_queue_family_index == transfer_queue_family_index);
 
+  vkGetPhysicalDeviceMemoryProperties(physical_device,
+                                      &this->device_memory_properties);
+
   // Create device queue info
   float queue_priorities[1] = {
     0.0f,
@@ -714,6 +719,213 @@ scegfx_context_vulkan_destroy_semaphore(scegfx_context_t* this,
   } else {
     allocator->allocator_callback(semaphore, 0, allocator->user_data);
   }
+}
+
+uint32_t
+scegfx_context_vulkan_get_memory_type(scegfx_context_t* super,
+                                      uint32_t type_bits,
+                                      scegfx_memory_properties_t properties)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+
+  for (uint32_t i = 0; i < this->device_memory_properties.memoryTypeCount;
+       i++) {
+    if ((type_bits & 1u) == 1u) {
+      if ((this->device_memory_properties.memoryTypes[i].propertyFlags &
+           properties) == properties) {
+        return i;
+      }
+    }
+    type_bits >>= 1u;
+  }
+  this->super.debug_callback(scegfx_debug_severity_error,
+                             __LINE__,
+                             FILE_BASENAME,
+                             "Could not find a matching memory type");
+  return 0;
+}
+
+scegfx_device_memory_t*
+scegfx_context_vulkan_allocate_memory(
+  scegfx_context_t* super,
+  const scegfx_device_memory_allocate_info_t* info,
+  scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+
+  VkMemoryAllocateInfo vk_info = {
+    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .allocationSize = info->allocation_size,
+    .memoryTypeIndex = info->memory_type_index,
+  };
+
+  VkDeviceMemory vk_memory;
+  VkResult result = vkAllocateMemory(this->device, &vk_info, NULL, &vk_memory);
+  if (result != VK_SUCCESS) {
+    this->super.debug_callback(scegfx_debug_severity_error,
+                               __LINE__,
+                               FILE_BASENAME,
+                               "Could not allocate memory");
+    return NULL;
+  }
+
+  scegfx_device_memory_vulkan_t* memory = NULL;
+  if (allocator == NULL)
+    memory = malloc(sizeof(scegfx_device_memory_vulkan_t));
+  else
+    memory = allocator->allocator_callback(
+      NULL, sizeof(scegfx_device_memory_vulkan_t), allocator->user_data);
+  memset(memory, 0, sizeof(scegfx_device_memory_vulkan_t));
+  memory->handle = vk_memory;
+
+  memory->super.initialized = true;
+  return (scegfx_device_memory_t*)memory;
+}
+
+void
+scegfx_context_vulkan_free_memory(scegfx_context_t* super,
+                                  scegfx_device_memory_t* memory,
+                                  scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+  scegfx_device_memory_vulkan_t* memory_vk =
+    (scegfx_device_memory_vulkan_t*)memory;
+
+  vkFreeMemory(this->device, memory_vk->handle, NULL);
+
+  if (allocator == NULL) {
+    free(memory);
+  } else {
+    allocator->allocator_callback(memory, 0, allocator->user_data);
+  }
+}
+
+bool
+scegfx_context_vulkan_map_memory(scegfx_context_t* super,
+                                 scegfx_device_memory_t* memory,
+                                 scegfx_device_size_t offset,
+                                 scegfx_device_size_t size,
+                                 void** data)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+  scegfx_device_memory_vulkan_t* vk_memory =
+    (scegfx_device_memory_vulkan_t*)memory;
+
+  VkResult result =
+    vkMapMemory(this->device, vk_memory->handle, offset, size, 0, data);
+
+  return result == VK_SUCCESS;
+}
+
+void
+scegfx_context_vulkan_unmap_memory(scegfx_context_t* super,
+                                   scegfx_device_memory_t* super_memory)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+  scegfx_device_memory_vulkan_t* memory =
+    (scegfx_device_memory_vulkan_t*)super_memory;
+
+  vkUnmapMemory(this->device, memory->handle);
+}
+
+bool
+scegfx_context_vulkan_flush_mapped_memory_ranges(
+  scegfx_context_t* super,
+  uint32_t memory_range_count,
+  const scegfx_mapped_device_memory_range_t* memory_ranges)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+
+  assert(memory_range_count <= 10);
+  VkMappedMemoryRange vk_memory_ranges[10];
+
+  for (uint32_t i = 0; i < memory_range_count; ++i) {
+    scegfx_device_memory_vulkan_t* vk_memory =
+      (scegfx_device_memory_vulkan_t*)memory_ranges[i].memory;
+    vk_memory_ranges[i].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    vk_memory_ranges[i].pNext = NULL;
+    vk_memory_ranges[i].memory = vk_memory->handle;
+    vk_memory_ranges[i].offset = memory_ranges[i].offset;
+    vk_memory_ranges[i].size = memory_ranges[i].size;
+  }
+
+  VkResult result = vkFlushMappedMemoryRanges(
+    this->device, memory_range_count, vk_memory_ranges);
+  return result == VK_SUCCESS;
+}
+
+scegfx_buffer_t*
+scegfx_context_vulkan_create_buffer(scegfx_context_t* this,
+                                    scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  scegfx_buffer_t* buffer = NULL;
+  if (allocator == NULL)
+    buffer = malloc(sizeof(scegfx_buffer_vulkan_t));
+  else
+    buffer = allocator->allocator_callback(
+      NULL, sizeof(scegfx_buffer_vulkan_t), allocator->user_data);
+  memset(buffer, 0, sizeof(scegfx_buffer_vulkan_t));
+
+  buffer->api_vtable = &scegfx_buffer_api_vtable_vulkan;
+  buffer->context = this;
+
+  return buffer;
+}
+
+void
+scegfx_context_vulkan_destroy_buffer(scegfx_context_t* this,
+                                     scegfx_buffer_t* buffer,
+                                     scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(buffer);
+  } else {
+    allocator->allocator_callback(buffer, 0, allocator->user_data);
+  }
+}
+
+void
+scegfx_context_vulkan_get_buffer_memory_requirements(
+  scegfx_context_t* super,
+  const scegfx_buffer_t* buffer,
+  scegfx_device_memory_requirements_t* memory_requirements)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+  scegfx_buffer_vulkan_t* vk_buffer = (scegfx_buffer_vulkan_t*)buffer;
+
+  VkMemoryRequirements vk_memory_requirements;
+  vkGetBufferMemoryRequirements(
+    this->device, vk_buffer->handle, &vk_memory_requirements);
+
+  memory_requirements->size = vk_memory_requirements.size;
+  memory_requirements->alignment = vk_memory_requirements.alignment;
+  memory_requirements->memory_type_bits = vk_memory_requirements.memoryTypeBits;
+}
+
+bool
+scegfx_context_vulkan_bind_buffer_memory(scegfx_context_t* super,
+                                         scegfx_buffer_t* buffer,
+                                         scegfx_device_memory_t* memory,
+                                         scegfx_device_size_t memory_offset)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+  scegfx_buffer_vulkan_t* vk_buffer = (scegfx_buffer_vulkan_t*)buffer;
+  scegfx_device_memory_vulkan_t* vk_memory =
+    (scegfx_device_memory_vulkan_t*)memory;
+
+  VkResult result = vkBindBufferMemory(
+    this->device, vk_buffer->handle, vk_memory->handle, memory_offset);
+  return result == VK_SUCCESS;
 }
 
 scegfx_swapchain_t*

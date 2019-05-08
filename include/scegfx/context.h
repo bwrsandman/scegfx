@@ -4,11 +4,20 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "common.h"
+
 typedef struct SDL_Window SDL_Window;
 
-typedef struct scegfx_private_window_t scegfx_private_window_t;
 typedef struct scegfx_allocator_t scegfx_allocator_t;
+typedef struct scegfx_buffer_t scegfx_buffer_t;
 typedef struct scegfx_context_t scegfx_context_t;
+typedef struct scegfx_device_memory_t scegfx_device_memory_t;
+typedef struct scegfx_device_memory_allocate_info_t
+  scegfx_device_memory_allocate_info_t;
+typedef struct scegfx_device_memory_requirements_t
+  scegfx_device_memory_requirements_t;
+typedef struct scegfx_mapped_device_memory_range_t
+  scegfx_mapped_device_memory_range_t;
 typedef struct scegfx_fence_t scegfx_fence_t;
 typedef struct scegfx_semaphore_t scegfx_semaphore_t;
 typedef struct scegfx_swapchain_t scegfx_swapchain_t;
@@ -45,6 +54,43 @@ typedef struct scegfx_context_api_vtable_t
   void (*destroy_semaphore)(scegfx_context_t* this,
                             scegfx_semaphore_t* semaphore,
                             scegfx_allocator_t* allocator);
+
+  uint32_t (*get_memory_type)(scegfx_context_t* this,
+                              uint32_t type_bits,
+                              scegfx_memory_properties_t properties);
+  scegfx_device_memory_t* (*allocate_memory)(
+    scegfx_context_t* this,
+    const scegfx_device_memory_allocate_info_t* info,
+    scegfx_allocator_t* allocator);
+  void (*free_memory)(scegfx_context_t* this,
+                      scegfx_device_memory_t* memory,
+                      scegfx_allocator_t* allocator);
+  bool (*map_memory)(scegfx_context_t* this,
+                     scegfx_device_memory_t* memory,
+                     scegfx_device_size_t offset,
+                     scegfx_device_size_t size,
+                     void** data);
+  void (*unmap_memory)(scegfx_context_t* this, scegfx_device_memory_t* memory);
+
+  bool (*flush_mapped_memory_ranges)(
+    scegfx_context_t* this,
+    uint32_t memory_range_count,
+    const scegfx_mapped_device_memory_range_t* memory_ranges);
+
+  scegfx_buffer_t* (*create_buffer)(scegfx_context_t* this,
+                                    scegfx_allocator_t* allocator);
+  void (*destroy_buffer)(scegfx_context_t* this,
+                         scegfx_buffer_t* buffer,
+                         scegfx_allocator_t* allocator);
+  void (*get_buffer_memory_requirements)(
+    scegfx_context_t* this,
+    const scegfx_buffer_t* buffer,
+    scegfx_device_memory_requirements_t* memory_requirements);
+
+  bool (*bind_buffer_memory)(scegfx_context_t* this,
+                             scegfx_buffer_t* buffer,
+                             scegfx_device_memory_t* memory,
+                             scegfx_device_size_t memory_offset);
 
   scegfx_swapchain_t* (*create_swapchain)(scegfx_context_t* this,
                                           scegfx_allocator_t* allocator);

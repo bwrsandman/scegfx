@@ -34,14 +34,19 @@ include(GNUInstallDirs)
 file(
   GLOB SOURCE_FILES
   include/scegfx/allocator.h
+  include/scegfx/buffer.h
   include/scegfx/common.h
   include/scegfx/context.h
+  include/scegfx/device_memory.h
   include/scegfx/fence.h
   include/scegfx/semaphore.h
   include/scegfx/swapchain.h
   src/context.c
+  src/backend/opengl/buffer_opengl.h
+  src/backend/opengl/buffer_opengl.c
   src/backend/opengl/context_opengl.h
   src/backend/opengl/context_opengl.c
+  src/backend/opengl/device_memory_opengl.h
   src/backend/opengl/fence_opengl.h
   src/backend/opengl/fence_opengl.c
   src/backend/opengl/semaphore_opengl.h
@@ -52,16 +57,22 @@ file(
 
 file(
   GLOB WEBGPU_SOURCE_FILES
+  src/backend/webgpu/buffer_webgpu.h
+  src/backend/webgpu/buffer_webgpu.c
   src/backend/webgpu/context_webgpu.h
   src/backend/webgpu/context_webgpu.c
+  src/backend/webgpu/device_memory_webgpu.h
   src/backend/webgpu/swapchain_webgpu.h
   src/backend/webgpu/swapchain_webgpu.c
 )
 
 file(
   GLOB VULKAN_SOURCE_FILES
+  src/backend/vulkan/buffer_vulkan.h
+  src/backend/vulkan/buffer_vulkan.c
   src/backend/vulkan/context_vulkan.h
   src/backend/vulkan/context_vulkan.c
+  src/backend/vulkan/device_memory_vulkan.h
   src/backend/vulkan/fence_vulkan.h
   src/backend/vulkan/fence_vulkan.c
   src/backend/vulkan/semaphore_vulkan.h

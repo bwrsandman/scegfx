@@ -10,6 +10,8 @@
 #include <SDL_opengl.h>
 #include <SDL_video.h>
 
+#include "buffer_opengl.h"
+#include "device_memory_opengl.h"
 #include "fence_opengl.h"
 #include "semaphore_opengl.h"
 #include "swapchain_opengl.h"
@@ -283,11 +285,253 @@ scegfx_context_opengl_destroy_semaphore(scegfx_context_t* this,
   }
 }
 
+typedef union scegfx_opengl_memory_type_t
+{
+  uint32_t raw;
+  struct
+  {
+    uint16_t usage;
+    uint16_t bind_point;
+  };
+} scegfx_opengl_memory_type_t;
+static_assert(sizeof(uint32_t) >= sizeof(scegfx_opengl_memory_type_t),
+              "Memory type does not fit in 32 bits");
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+uint32_t
+scegfx_context_opengl_get_memory_type(scegfx_context_t* super,
+                                      uint32_t type_bits,
+                                      scegfx_memory_properties_t properties)
+#pragma clang diagnostic pop
+{
+  assert(super->initialized);
+  scegfx_buffer_usage_t usage = type_bits;
+  scegfx_opengl_memory_type_t result = { .raw = 0 };
+  if (usage & scegfx_buffer_usage_index_buffer) {
+    result.usage = GL_STATIC_DRAW;
+    result.bind_point = GL_ELEMENT_ARRAY_BUFFER;
+  } else if (usage & scegfx_buffer_usage_vertex_buffer) {
+    result.usage = GL_STATIC_DRAW;
+    result.bind_point = GL_ARRAY_BUFFER;
+  } else if (usage & scegfx_buffer_usage_uniform_buffer) {
+    result.usage = GL_DYNAMIC_DRAW;
+    result.bind_point = GL_UNIFORM_BUFFER;
+  } else if (usage & scegfx_buffer_usage_transfer_src) {
+    result.usage = GL_DYNAMIC_COPY;
+    result.bind_point = GL_COPY_READ_BUFFER;
+  } else if (usage & scegfx_buffer_usage_transfer_dst) {
+    result.usage = GL_DYNAMIC_COPY;
+    result.bind_point = GL_COPY_WRITE_BUFFER;
+  }
+
+  if (properties & scegfx_memory_properties_device_local) {
+    result.usage = GL_STATIC_DRAW;
+  } else if (properties & scegfx_memory_properties_host_visible) {
+    result.usage = GL_DYNAMIC_DRAW;
+  }
+
+  assert(result.raw != 0);
+  return result.raw;
+}
+
+scegfx_device_memory_t*
+scegfx_context_opengl_allocate_memory(
+  scegfx_context_t* super,
+  const scegfx_device_memory_allocate_info_t* info,
+  scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_opengl_memory_type_t memory_type = { .raw = info->memory_type_index };
+
+  uint32_t memory_gl = 0;
+  glGenBuffers(1, &memory_gl);
+
+  scegfx_device_memory_opengl_t* memory = NULL;
+  if (allocator == NULL)
+    memory = malloc(sizeof(scegfx_device_memory_opengl_t));
+  else
+    memory = allocator->allocator_callback(
+      NULL, sizeof(scegfx_device_memory_opengl_t), allocator->user_data);
+  memset(memory, 0, sizeof(scegfx_device_memory_opengl_t));
+  memory->handle = memory_gl;
+
+  memory->bind_point = memory_type.bind_point;
+
+  glBindBuffer(memory->bind_point, memory->handle);
+  glBufferData(
+    memory->bind_point, info->allocation_size, NULL, memory_type.usage);
+
+#if defined(EMSCRIPTEN)
+  memory->stage = malloc(info->allocation_size);
+  memory->size = info->allocation_size;
+#endif // defined(EMSCRIPTEN)
+
+  memory->super.initialized = true;
+  return (scegfx_device_memory_t*)memory;
+}
+
+void
+scegfx_context_opengl_free_memory(scegfx_context_t* super,
+                                  scegfx_device_memory_t* memory,
+                                  scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  assert(memory);
+  scegfx_device_memory_opengl_t* memory_gl =
+    (scegfx_device_memory_opengl_t*)memory;
+
+#if defined(EMSCRIPTEN)
+  free(memory_gl->stage);
+#endif // defined(EMSCRIPTEN)
+
+  glDeleteBuffers(1, &memory_gl->handle);
+
+  if (allocator == NULL) {
+    free(memory);
+  } else {
+    allocator->allocator_callback(memory, 0, allocator->user_data);
+  }
+}
+
+bool
+scegfx_context_opengl_map_memory(scegfx_context_t* super,
+                                 scegfx_device_memory_t* memory,
+                                 scegfx_device_size_t offset,
+                                 scegfx_device_size_t size,
+                                 void** data)
+{
+  assert(super->initialized);
+  assert(memory);
+  scegfx_device_memory_opengl_t* memory_gl =
+    (scegfx_device_memory_opengl_t*)memory;
+  glBindBuffer(memory_gl->bind_point, memory_gl->handle);
+#if defined(EMSCRIPTEN)
+  assert(size);
+  *data = (void*)((uintptr_t)memory_gl->stage + offset);
+#else
+  *data = glMapBufferRange(memory_gl->bind_point,
+                           offset,
+                           size,
+                           GL_MAP_READ_BIT | GL_MAP_WRITE_BIT |
+                             GL_MAP_FLUSH_EXPLICIT_BIT);
+#endif // defined(EMSCRIPTEN)
+  return *data != NULL;
+}
+
+void
+scegfx_context_opengl_unmap_memory(scegfx_context_t* super,
+                                   scegfx_device_memory_t* memory)
+{
+  assert(super->initialized);
+  assert(memory);
+  scegfx_device_memory_opengl_t* memory_gl =
+    (scegfx_device_memory_opengl_t*)memory;
+#if defined(EMSCRIPTEN)
+  scegfx_mapped_device_memory_range_t range = {
+    .memory = memory,
+    .offset = 0,
+    .size = memory_gl->size,
+  };
+  scegfx_context_opengl_flush_mapped_memory_ranges(super, 1, &range);
+#else
+  glUnmapBuffer(memory_gl->bind_point);
+#endif // !defined(EMSCRIPTEN)
+}
+
+bool
+scegfx_context_opengl_flush_mapped_memory_ranges(
+  scegfx_context_t* super,
+  uint32_t memory_range_count,
+  const scegfx_mapped_device_memory_range_t* memory_ranges)
+{
+  assert(super->initialized);
+  for (uint32_t i = 0; i < memory_range_count; ++i) {
+    scegfx_device_memory_opengl_t* memory_gl =
+      (scegfx_device_memory_opengl_t*)memory_ranges[i].memory;
+#if defined(EMSCRIPTEN)
+    void* stage_ptr =
+      (void*)((uintptr_t)memory_gl->stage + memory_ranges[i].offset);
+    glBufferSubData(memory_gl->bind_point,
+                    memory_ranges[i].offset,
+                    memory_ranges[i].size,
+                    stage_ptr);
+#else
+    glFlushMappedBufferRange(
+      memory_gl->bind_point, memory_ranges[i].offset, memory_ranges[i].size);
+#endif // defined(EMSCRIPTEN)
+  }
+  return true;
+}
+
+scegfx_buffer_t*
+scegfx_context_opengl_create_buffer(scegfx_context_t* super,
+                                    scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_buffer_t* buffer = NULL;
+  if (allocator == NULL)
+    buffer = malloc(sizeof(scegfx_buffer_opengl_t));
+  else
+    buffer = allocator->allocator_callback(
+      NULL, sizeof(scegfx_buffer_opengl_t), allocator->user_data);
+  memset(buffer, 0, sizeof(scegfx_buffer_opengl_t));
+
+  buffer->api_vtable = &scegfx_buffer_api_vtable_opengl;
+  buffer->context = super;
+
+  return buffer;
+}
+
+void
+scegfx_context_opengl_destroy_buffer(scegfx_context_t* super,
+                                     scegfx_buffer_t* buffer,
+                                     scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  if (allocator == NULL) {
+    free(buffer);
+  } else {
+    allocator->allocator_callback(buffer, 0, allocator->user_data);
+  }
+}
+
+void
+scegfx_context_opengl_get_buffer_memory_requirements(
+  scegfx_context_t* super,
+  const scegfx_buffer_t* buffer,
+  scegfx_device_memory_requirements_t* memory_requirements)
+{
+  assert(super->initialized);
+  assert(buffer);
+  assert(buffer->initialized);
+  scegfx_buffer_opengl_t* buffer_gl = (scegfx_buffer_opengl_t*)buffer;
+  memory_requirements->size = buffer_gl->size;
+  memory_requirements->memory_type_bits = buffer_gl->usage;
+}
+
+bool
+scegfx_context_opengl_bind_buffer_memory(scegfx_context_t* super,
+                                         scegfx_buffer_t* buffer,
+                                         scegfx_device_memory_t* memory,
+                                         scegfx_device_size_t memory_offset)
+{
+  assert(super->initialized);
+  assert(memory_offset == 0);
+  scegfx_buffer_opengl_t* buffer_gl = (scegfx_buffer_opengl_t*)buffer;
+  scegfx_device_memory_opengl_t* memory_gl =
+    (scegfx_device_memory_opengl_t*)memory;
+
+  buffer_gl->handle = memory_gl->handle;
+
+  return buffer_gl->handle != 0;
+}
+
 scegfx_swapchain_t*
-scegfx_context_opengl_create_swapchain(scegfx_context_t* this,
+scegfx_context_opengl_create_swapchain(scegfx_context_t* super,
                                        scegfx_allocator_t* allocator)
 {
-  assert(this->initialized);
+  assert(super->initialized);
   scegfx_swapchain_t* swapchain = NULL;
   if (allocator == NULL)
     swapchain = malloc(sizeof(scegfx_swapchain_opengl_t));
@@ -296,8 +540,8 @@ scegfx_context_opengl_create_swapchain(scegfx_context_t* this,
       NULL, sizeof(scegfx_swapchain_opengl_t), allocator->user_data);
   memset(swapchain, 0, sizeof(scegfx_swapchain_opengl_t));
 
-  swapchain->api_vtable = &scegfx_swapchain_api_vtable_gles;
-  swapchain->context = this;
+  swapchain->api_vtable = &scegfx_swapchain_api_vtable_opengl;
+  swapchain->context = super;
 
   return swapchain;
 }
