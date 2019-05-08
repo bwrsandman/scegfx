@@ -5,6 +5,7 @@
 #include "commands_opengl.h"
 
 #include <SDL_opengl.h>
+#include <assert.h>
 
 #include "command_buffer_opengl.h"
 #include "framebuffer_opengl.h"
@@ -35,3 +36,20 @@ scegfx_command_end_render_pass_opengl(const scegfx_command_arg_t* arg)
 }
 
 #pragma clang diagnostic pop
+
+void
+scegfx_command_opengl_bind_pipeline(const scegfx_command_arg_t* arg)
+{
+  if (arg->bind_pipeline.type == scegfx_pipeline_type_graphics) {
+    if (arg->bind_pipeline.graphics.cull_face) {
+      glEnable(GL_CULL_FACE);
+      glCullFace(arg->bind_pipeline.graphics.cull_face);
+    } else {
+      glDisable(GL_CULL_FACE);
+    }
+    glFrontFace(arg->bind_pipeline.graphics.front_face);
+    glLineWidth(arg->bind_pipeline.graphics.line_width);
+  }
+  assert(glIsProgram(arg->bind_pipeline.program));
+  glUseProgram(arg->bind_pipeline.program);
+}

@@ -24,6 +24,7 @@ typedef struct scegfx_context_vulkan_t
   struct
   {
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormats;
+    PFN_vkCreateRayTracingPipelinesNV CreateRayTracingPipelines;
   } functions;
   uint32_t instance_extension_count;
   char instance_extension_names[SCEGFX_VULKAN_MAX_EXTENSION_COUNT]
@@ -50,6 +51,7 @@ typedef struct scegfx_context_vulkan_t
   uint32_t present_graphics_compute_transfer_queue_index;
   VkQueue present_graphics_compute_transfer_queue;
   VkCommandPool command_pool;
+  VkPipelineCache pipeline_cache;
 } scegfx_context_vulkan_t;
 
 bool
@@ -203,6 +205,14 @@ scegfx_context_vulkan_destroy_pipeline_layout(scegfx_context_t* this,
                                               scegfx_pipeline_layout_t* layout,
                                               scegfx_allocator_t* allocator);
 
+scegfx_pipeline_t*
+scegfx_context_vulkan_create_pipeline(scegfx_context_t* this,
+                                      scegfx_allocator_t* allocator);
+void
+scegfx_context_vulkan_destroy_pipeline(scegfx_context_t* this,
+                                       scegfx_pipeline_t* pipeline,
+                                       scegfx_allocator_t* allocator);
+
 bool
 scegfx_context_vulkan_make_current(scegfx_context_t* this);
 bool
@@ -255,6 +265,8 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_vulkan = {
   .destroy_shader_module = scegfx_context_vulkan_destroy_shader_module,
   .create_pipeline_layout = scegfx_context_vulkan_create_pipeline_layout,
   .destroy_pipeline_layout = scegfx_context_vulkan_destroy_pipeline_layout,
+  .create_pipeline = scegfx_context_vulkan_create_pipeline,
+  .destroy_pipeline = scegfx_context_vulkan_destroy_pipeline,
   .make_current = scegfx_context_vulkan_make_current,
   .submit_to_queue = scegfx_context_vulkan_submit_to_queue,
   .present = scegfx_context_vulkan_present,

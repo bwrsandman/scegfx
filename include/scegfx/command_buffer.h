@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include "common.h"
+#include "pipeline.h"
 
 typedef struct scegfx_command_buffer_t scegfx_command_buffer_t;
 typedef struct scegfx_context_t scegfx_context_t;
@@ -38,6 +39,10 @@ typedef struct scegfx_command_buffer_api_vtable_t
   void (*begin_render_pass)(scegfx_command_buffer_t* this,
                             const scegfx_render_pass_begin_info_t* info);
   void (*end_render_pass)(scegfx_command_buffer_t* this);
+
+  void (*bind_pipeline)(scegfx_command_buffer_t* this,
+                        scegfx_pipeline_type_t type,
+                        const scegfx_pipeline_t* pipeline);
 } scegfx_command_buffer_api_vtable_t;
 
 typedef struct scegfx_command_buffer_t

@@ -44,6 +44,7 @@ file(
   include/scegfx/image.h
   include/scegfx/image_view.h
   include/scegfx/pipeline_layout.h
+  include/scegfx/pipeline.h
   include/scegfx/render_pass.h
   include/scegfx/sampler.h
   include/scegfx/semaphore.h
@@ -67,6 +68,8 @@ file(
   src/backend/opengl/image_opengl.c
   src/backend/opengl/image_view_opengl.h
   src/backend/opengl/image_view_opengl.c
+  src/backend/opengl/pipeline_opengl.h
+  src/backend/opengl/pipeline_opengl.c
   src/backend/opengl/pipeline_layout_opengl.h
   src/backend/opengl/pipeline_layout_opengl.c
   src/backend/opengl/render_pass_opengl.h
@@ -111,6 +114,8 @@ file(
   src/backend/vulkan/image_view_vulkan.c
   src/backend/vulkan/pipeline_layout_vulkan.h
   src/backend/vulkan/pipeline_layout_vulkan.c
+  src/backend/vulkan/pipeline_vulkan.h
+  src/backend/vulkan/pipeline_vulkan.c
   src/backend/vulkan/render_pass_vulkan.h
   src/backend/vulkan/render_pass_vulkan.c
   src/backend/vulkan/semaphore_vulkan.h

@@ -12,6 +12,7 @@
 #include <scegfx/fence.h>
 #include <scegfx/framebuffer.h>
 #include <scegfx/image_view.h>
+#include <scegfx/pipeline.h>
 #include <scegfx/pipeline_layout.h>
 #include <scegfx/render_pass.h>
 #include <scegfx/semaphore.h>
@@ -62,6 +63,7 @@ struct app_t {
   scegfx_command_buffer_t** cmd;
   scegfx_render_pass_t* render_pass;
   scegfx_pipeline_layout_t* pipeline_layout;
+  scegfx_pipeline_t* pipeline;
 } app = {};
 
 args_t default_args = {
@@ -368,6 +370,8 @@ encode_commands()
       };
       app.cmd[i]->api_vtable->begin_render_pass(app.cmd[i], &info);
     }
+    app.cmd[i]->api_vtable->bind_pipeline(
+      app.cmd[i], scegfx_pipeline_type_graphics, app.pipeline);
     app.cmd[i]->api_vtable->end_render_pass(app.cmd[i]);
     app.cmd[i]->api_vtable->end(app.cmd[i]);
   }
@@ -435,6 +439,26 @@ init_pipeline()
   app.pipeline_layout =
     app.context->api_vtable->create_pipeline_layout(app.context, NULL);
   app.pipeline_layout->api_vtable->initialize(app.pipeline_layout);
+  app.pipeline = app.context->api_vtable->create_pipeline(app.context, NULL);
+  {
+    scegfx_pipeline_create_info_t info = {
+        .type = scegfx_pipeline_type_graphics,
+        .layout = app.pipeline_layout,
+        .graphics = {
+            .stages = {
+                .vertex = vert_module,
+                .fragment = frag_module,
+            },
+            .raster_state = {
+                .cull_mode = scegfx_raster_state_cull_mode_back,
+                .front_face = scegfx_raster_state_front_face_counter_clockwise,
+                .line_width = 1.0f,
+            },
+            .render_pass = app.render_pass,
+        },
+    };
+    app.pipeline->api_vtable->initialize(app.pipeline, &info);
+  }
 
   vert_module->api_vtable->terminate(vert_module);
   frag_module->api_vtable->terminate(frag_module);
@@ -538,6 +562,7 @@ clean_up()
   app.acquire_semaphore->api_vtable->terminate(app.acquire_semaphore);
   app.render_semaphore->api_vtable->terminate(app.render_semaphore);
   app.pipeline_layout->api_vtable->terminate(app.pipeline_layout);
+  app.pipeline->api_vtable->terminate(app.pipeline);
   for (uint32_t i = 0; i < image_count; ++i) {
     app.swapchain_image_view[i]->api_vtable->terminate(
       app.swapchain_image_view[i]);
@@ -556,6 +581,7 @@ clean_up()
     app.context, app.render_semaphore, NULL);
   app.context->api_vtable->destroy_pipeline_layout(
     app.context, app.pipeline_layout, NULL);
+  app.context->api_vtable->destroy_pipeline(app.context, app.pipeline, NULL);
   for (uint32_t i = 0; i < image_count; ++i) {
     app.context->api_vtable->destroy_image_view(
       app.context, app.swapchain_image_view[i], NULL);

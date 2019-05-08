@@ -15,6 +15,7 @@
 #include "framebuffer_vulkan.h"
 #include "image_view_vulkan.h"
 #include "pipeline_layout_vulkan.h"
+#include "pipeline_vulkan.h"
 #include "render_pass_vulkan.h"
 #include "sampler_vulkan.h"
 #include "semaphore_vulkan.h"
@@ -374,6 +375,17 @@ get_instance_procs(scegfx_context_vulkan_t* this)
   return true;
 }
 
+bool
+get_device_procs(scegfx_context_vulkan_t* this)
+{
+  // Optional
+  this->functions.CreateRayTracingPipelines =
+    (PFN_vkCreateRayTracingPipelinesNV)vkGetDeviceProcAddr(
+      this->device, "vkCreateRayTracingPipelines");
+
+  return true;
+}
+
 void
 destroy_instance(scegfx_context_vulkan_t* this)
 {
@@ -625,6 +637,31 @@ destroy_command_pool(scegfx_context_vulkan_t* this)
 }
 
 bool
+create_pipeline_cache(scegfx_context_vulkan_t* this)
+{
+  VkResult res;
+  VkPipelineCacheCreateInfo info = {
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+  };
+  res = vkCreatePipelineCache(this->device, &info, NULL, &this->pipeline_cache);
+  if (res != VK_SUCCESS) {
+    this->super.debug_callback(scegfx_debug_severity_error,
+                               __LINE__,
+                               FILE_BASENAME,
+                               "Unable to create pipeline cache");
+    return false;
+  }
+
+  return true;
+}
+
+void
+destroy_pipeline_cache(scegfx_context_vulkan_t* this)
+{
+  vkDestroyPipelineCache(this->device, this->pipeline_cache, NULL);
+}
+
+bool
 scegfx_context_vulkan_initialize(scegfx_context_t* super)
 {
   assert(!super->initialized);
@@ -645,6 +682,9 @@ scegfx_context_vulkan_initialize(scegfx_context_t* super)
   if (!create_command_pool(this)) {
     return false;
   }
+  if (!create_pipeline_cache(this)) {
+    return false;
+  }
   super->initialized = true;
   return true;
 }
@@ -654,6 +694,7 @@ scegfx_context_vulkan_terminate(scegfx_context_t* super)
 {
   assert(super->initialized);
   scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+  destroy_pipeline_cache(this);
   destroy_command_pool(this);
   destroy_device(this);
   destroy_surface(this);
@@ -1261,6 +1302,38 @@ scegfx_context_vulkan_destroy_pipeline_layout(scegfx_context_t* this,
     free(layout);
   } else {
     allocator->allocator_callback(layout, 0, allocator->user_data);
+  }
+}
+
+scegfx_pipeline_t*
+scegfx_context_vulkan_create_pipeline(scegfx_context_t* super,
+                                      scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_pipeline_t* pipeline = NULL;
+  if (allocator == NULL)
+    pipeline = malloc(sizeof(scegfx_pipeline_vulkan_t));
+  else
+    pipeline = allocator->allocator_callback(
+      NULL, sizeof(scegfx_pipeline_vulkan_t), allocator->user_data);
+  memset(pipeline, 0, sizeof(scegfx_pipeline_vulkan_t));
+
+  pipeline->api_vtable = &scegfx_pipeline_api_vtable_vulkan;
+  pipeline->context = super;
+
+  return pipeline;
+}
+
+void
+scegfx_context_vulkan_destroy_pipeline(scegfx_context_t* this,
+                                       scegfx_pipeline_t* pipeline,
+                                       scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(pipeline);
+  } else {
+    allocator->allocator_callback(pipeline, 0, allocator->user_data);
   }
 }
 

@@ -7,8 +7,10 @@
 #include <assert.h>
 #include <string.h>
 
+#include "commands_opengl.h"
 #include "context_opengl.h"
 #include "framebuffer_opengl.h"
+#include "pipeline_opengl.h"
 #include "render_pass_opengl.h"
 
 bool
@@ -156,6 +158,40 @@ scegfx_command_buffer_opengl_end_render_pass(scegfx_command_buffer_t* super)
   assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
 
   this->commands[this->count] = scegfx_command_end_render_pass_opengl;
+
+  ++this->count;
+}
+
+void
+scegfx_command_buffer_opengl_bind_pipeline(scegfx_command_buffer_t* super,
+                                           scegfx_pipeline_type_t type,
+                                           const scegfx_pipeline_t* pipeline)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  scegfx_pipeline_opengl_t* pipeline_opengl =
+    (scegfx_pipeline_opengl_t*)pipeline;
+  assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+  assert(type == pipeline_opengl->type);
+#if defined(EMSCRIPTEN)
+  assert(pipeline_opengl->type == scegfx_pipeline_type_graphics ||
+         pipeline_opengl->type == scegfx_pipeline_type_compute);
+#else
+  assert(pipeline_opengl->type == scegfx_pipeline_type_graphics);
+#endif
+
+  this->commands[this->count] = scegfx_command_opengl_bind_pipeline;
+  this->args[this->count].bind_pipeline.type = pipeline_opengl->type;
+  this->args[this->count].bind_pipeline.program = pipeline_opengl->program;
+
+  if (pipeline_opengl->type == scegfx_pipeline_type_graphics) {
+    this->args[this->count].bind_pipeline.graphics.front_face =
+      pipeline_opengl->graphics.front_face;
+    this->args[this->count].bind_pipeline.graphics.cull_face =
+      pipeline_opengl->graphics.cull_face;
+    this->args[this->count].bind_pipeline.graphics.line_width =
+      pipeline_opengl->graphics.line_width;
+  }
 
   ++this->count;
 }

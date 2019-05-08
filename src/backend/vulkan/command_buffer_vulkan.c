@@ -9,6 +9,7 @@
 
 #include "context_vulkan.h"
 #include "framebuffer_vulkan.h"
+#include "pipeline_vulkan.h"
 #include "render_pass_vulkan.h"
 
 bool
@@ -128,4 +129,34 @@ scegfx_command_buffer_vulkan_end_render_pass(scegfx_command_buffer_t* super)
   scegfx_command_buffer_vulkan_t* this = (scegfx_command_buffer_vulkan_t*)super;
 
   vkCmdEndRenderPass(this->handle);
+}
+
+void
+scegfx_command_buffer_vulkan_bind_pipeline(scegfx_command_buffer_t* super,
+                                           scegfx_pipeline_type_t type,
+                                           const scegfx_pipeline_t* pipeline)
+{
+  assert(super->initialized);
+
+  scegfx_command_buffer_vulkan_t* this = (scegfx_command_buffer_vulkan_t*)super;
+  scegfx_pipeline_vulkan_t* pipeline_vk = (scegfx_pipeline_vulkan_t*)pipeline;
+
+  VkPipelineBindPoint bind_point;
+
+  switch (type) {
+    case scegfx_pipeline_type_graphics:
+      bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+      break;
+    case scegfx_pipeline_type_compute:
+      bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+      break;
+    case scegfx_pipeline_type_ray_tracing:
+      bind_point = VK_PIPELINE_BIND_POINT_RAY_TRACING_NV;
+      break;
+    default:
+      assert(0);
+      return;
+  }
+
+  vkCmdBindPipeline(this->handle, bind_point, pipeline_vk->handle);
 }

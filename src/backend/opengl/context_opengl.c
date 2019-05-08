@@ -18,6 +18,7 @@
 #include "image_opengl.h"
 #include "image_view_opengl.h"
 #include "pipeline_layout_opengl.h"
+#include "pipeline_opengl.h"
 #include "render_pass_opengl.h"
 #include "sampler_opengl.h"
 #include "semaphore_opengl.h"
@@ -934,7 +935,38 @@ scegfx_context_opengl_destroy_pipeline_layout(scegfx_context_t* super,
     allocator->allocator_callback(layout, 0, allocator->user_data);
   }
 }
-#pragma clang diagnostic pop
+
+scegfx_pipeline_t*
+scegfx_context_opengl_create_pipeline(scegfx_context_t* super,
+                                      scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_pipeline_t* pipeline = NULL;
+  if (allocator == NULL)
+    pipeline = malloc(sizeof(scegfx_pipeline_opengl_t));
+  else
+    pipeline = allocator->allocator_callback(
+      NULL, sizeof(scegfx_pipeline_opengl_t), allocator->user_data);
+  memset(pipeline, 0, sizeof(scegfx_pipeline_opengl_t));
+
+  pipeline->api_vtable = &scegfx_pipeline_api_vtable_opengl;
+  pipeline->context = super;
+
+  return pipeline;
+}
+
+void
+scegfx_context_opengl_destroy_pipeline(scegfx_context_t* super,
+                                       scegfx_pipeline_t* pipeline,
+                                       scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  if (allocator == NULL) {
+    free(pipeline);
+  } else {
+    allocator->allocator_callback(pipeline, 0, allocator->user_data);
+  }
+}
 
 bool
 scegfx_context_opengl_make_current(scegfx_context_t* super)
