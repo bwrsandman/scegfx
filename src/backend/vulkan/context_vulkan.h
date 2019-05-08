@@ -195,6 +195,14 @@ scegfx_context_vulkan_destroy_command_buffer(scegfx_context_t* super,
                                              scegfx_command_buffer_t* queue,
                                              scegfx_allocator_t* allocator);
 
+scegfx_pipeline_layout_t*
+scegfx_context_vulkan_create_pipeline_layout(scegfx_context_t* this,
+                                             scegfx_allocator_t* allocator);
+void
+scegfx_context_vulkan_destroy_pipeline_layout(scegfx_context_t* this,
+                                              scegfx_pipeline_layout_t* layout,
+                                              scegfx_allocator_t* allocator);
+
 bool
 scegfx_context_vulkan_make_current(scegfx_context_t* this);
 bool
@@ -245,6 +253,8 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_vulkan = {
   .destroy_command_buffer = scegfx_context_vulkan_destroy_command_buffer,
   .create_shader_module = scegfx_context_vulkan_create_shader_module,
   .destroy_shader_module = scegfx_context_vulkan_destroy_shader_module,
+  .create_pipeline_layout = scegfx_context_vulkan_create_pipeline_layout,
+  .destroy_pipeline_layout = scegfx_context_vulkan_destroy_pipeline_layout,
   .make_current = scegfx_context_vulkan_make_current,
   .submit_to_queue = scegfx_context_vulkan_submit_to_queue,
   .present = scegfx_context_vulkan_present,

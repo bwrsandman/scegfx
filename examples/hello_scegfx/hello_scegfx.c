@@ -12,6 +12,7 @@
 #include <scegfx/fence.h>
 #include <scegfx/framebuffer.h>
 #include <scegfx/image_view.h>
+#include <scegfx/pipeline_layout.h>
 #include <scegfx/render_pass.h>
 #include <scegfx/semaphore.h>
 #include <scegfx/shader_module.h>
@@ -60,6 +61,7 @@ struct app_t {
   scegfx_framebuffer_t** framebuffer;
   scegfx_command_buffer_t** cmd;
   scegfx_render_pass_t* render_pass;
+  scegfx_pipeline_layout_t* pipeline_layout;
 } app = {};
 
 args_t default_args = {
@@ -430,6 +432,10 @@ init_pipeline()
   }
   SDL_free((void*)base_path);
 
+  app.pipeline_layout =
+    app.context->api_vtable->create_pipeline_layout(app.context, NULL);
+  app.pipeline_layout->api_vtable->initialize(app.pipeline_layout);
+
   vert_module->api_vtable->terminate(vert_module);
   frag_module->api_vtable->terminate(frag_module);
   app.context->api_vtable->destroy_shader_module(
@@ -531,6 +537,7 @@ clean_up()
   app.present_fence->api_vtable->terminate(app.present_fence);
   app.acquire_semaphore->api_vtable->terminate(app.acquire_semaphore);
   app.render_semaphore->api_vtable->terminate(app.render_semaphore);
+  app.pipeline_layout->api_vtable->terminate(app.pipeline_layout);
   for (uint32_t i = 0; i < image_count; ++i) {
     app.swapchain_image_view[i]->api_vtable->terminate(
       app.swapchain_image_view[i]);
@@ -547,6 +554,8 @@ clean_up()
     app.context, app.acquire_semaphore, NULL);
   app.context->api_vtable->destroy_semaphore(
     app.context, app.render_semaphore, NULL);
+  app.context->api_vtable->destroy_pipeline_layout(
+    app.context, app.pipeline_layout, NULL);
   for (uint32_t i = 0; i < image_count; ++i) {
     app.context->api_vtable->destroy_image_view(
       app.context, app.swapchain_image_view[i], NULL);

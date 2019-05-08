@@ -17,6 +17,7 @@
 #include "framebuffer_opengl.h"
 #include "image_opengl.h"
 #include "image_view_opengl.h"
+#include "pipeline_layout_opengl.h"
 #include "render_pass_opengl.h"
 #include "sampler_opengl.h"
 #include "semaphore_opengl.h"
@@ -899,6 +900,41 @@ scegfx_context_opengl_destroy_shader_module(
     allocator->allocator_callback(shader_module, 0, allocator->user_data);
   }
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+scegfx_pipeline_layout_t*
+scegfx_context_opengl_create_pipeline_layout(scegfx_context_t* super,
+                                             scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_pipeline_layout_t* layout = NULL;
+  if (allocator == NULL)
+    layout = malloc(sizeof(scegfx_pipeline_layout_opengl_t));
+  else
+    layout = allocator->allocator_callback(
+      NULL, sizeof(scegfx_pipeline_layout_opengl_t), allocator->user_data);
+  memset(layout, 0, sizeof(scegfx_pipeline_layout_opengl_t));
+
+  layout->api_vtable = &scegfx_pipeline_layout_api_vtable_opengl;
+  layout->context = super;
+
+  return layout;
+}
+
+void
+scegfx_context_opengl_destroy_pipeline_layout(scegfx_context_t* super,
+                                              scegfx_pipeline_layout_t* layout,
+                                              scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  if (allocator == NULL) {
+    free(layout);
+  } else {
+    allocator->allocator_callback(layout, 0, allocator->user_data);
+  }
+}
+#pragma clang diagnostic pop
 
 bool
 scegfx_context_opengl_make_current(scegfx_context_t* super)

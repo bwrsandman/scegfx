@@ -28,6 +28,7 @@ typedef struct scegfx_sampler_t scegfx_sampler_t;
 typedef struct scegfx_semaphore_t scegfx_semaphore_t;
 typedef struct scegfx_swapchain_t scegfx_swapchain_t;
 typedef struct scegfx_shader_module_t scegfx_shader_module_t;
+typedef struct scegfx_pipeline_layout_t scegfx_pipeline_layout_t;
 
 typedef enum scegfx_backend_api_t
 {
@@ -170,6 +171,13 @@ typedef struct scegfx_context_api_vtable_t
   void (*destroy_shader_module)(scegfx_context_t* this,
                                 scegfx_shader_module_t* shader_module,
                                 scegfx_allocator_t* allocator);
+
+  scegfx_pipeline_layout_t* (*create_pipeline_layout)(
+    scegfx_context_t* this,
+    scegfx_allocator_t* allocator);
+  void (*destroy_pipeline_layout)(scegfx_context_t* this,
+                                  scegfx_pipeline_layout_t* layout,
+                                  scegfx_allocator_t* allocator);
 
   bool (*make_current)(scegfx_context_t* this);
   bool (*submit_to_queue)(scegfx_context_t* this,

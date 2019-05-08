@@ -14,6 +14,7 @@
 #include "fence_vulkan.h"
 #include "framebuffer_vulkan.h"
 #include "image_view_vulkan.h"
+#include "pipeline_layout_vulkan.h"
 #include "render_pass_vulkan.h"
 #include "sampler_vulkan.h"
 #include "semaphore_vulkan.h"
@@ -1228,6 +1229,38 @@ scegfx_context_vulkan_destroy_shader_module(
     free(shader_module);
   } else {
     allocator->allocator_callback(shader_module, 0, allocator->user_data);
+  }
+}
+
+scegfx_pipeline_layout_t*
+scegfx_context_vulkan_create_pipeline_layout(scegfx_context_t* super,
+                                             scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_pipeline_layout_t* layout = NULL;
+  if (allocator == NULL)
+    layout = malloc(sizeof(scegfx_pipeline_layout_vulkan_t));
+  else
+    layout = allocator->allocator_callback(
+      NULL, sizeof(scegfx_pipeline_layout_vulkan_t), allocator->user_data);
+  memset(layout, 0, sizeof(scegfx_pipeline_layout_vulkan_t));
+
+  layout->api_vtable = &scegfx_pipeline_layout_api_vtable_vulkan;
+  layout->context = super;
+
+  return layout;
+}
+
+void
+scegfx_context_vulkan_destroy_pipeline_layout(scegfx_context_t* this,
+                                              scegfx_pipeline_layout_t* layout,
+                                              scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(layout);
+  } else {
+    allocator->allocator_callback(layout, 0, allocator->user_data);
   }
 }
 
