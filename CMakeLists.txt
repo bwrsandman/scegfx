@@ -46,6 +46,7 @@ file(
   include/scegfx/render_pass.h
   include/scegfx/sampler.h
   include/scegfx/semaphore.h
+  include/scegfx/shader_module.h
   include/scegfx/swapchain.h
   src/context.c
   src/backend/opengl/buffer_opengl.h
@@ -71,6 +72,8 @@ file(
   src/backend/opengl/sampler_opengl.c
   src/backend/opengl/semaphore_opengl.h
   src/backend/opengl/semaphore_opengl.c
+  src/backend/opengl/shader_module_opengl.h
+  src/backend/opengl/shader_module_opengl.c
   src/backend/opengl/swapchain_opengl.h
   src/backend/opengl/swapchain_opengl.c
 )
@@ -109,6 +112,8 @@ file(
   src/backend/vulkan/semaphore_vulkan.c
   src/backend/vulkan/sampler_vulkan.h
   src/backend/vulkan/sampler_vulkan.c
+  src/backend/vulkan/shader_module_vulkan.h
+  src/backend/vulkan/shader_module_vulkan.c
   src/backend/vulkan/swapchain_vulkan.h
   src/backend/vulkan/swapchain_vulkan.c
 )
@@ -117,11 +122,27 @@ set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 
 if(EMSCRIPTEN)
+  set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
+  set(SPIRV_CROSS_SHARED ON)
+  set(SPIRV_CROSS_STATIC ON)
+  set(SPIRV_CROSS_CLI OFF)
+  set(SPIRV_CROSS_ENABLE_TESTS OFF)
+  set(SPIRV_CROSS_ENABLE_MSL OFF)
+  set(SPIRV_CROSS_ENABLE_HLSL OFF)
+  set(SPIRV_CROSS_ENABLE_CPP OFF)
+  set(SPIRV_CROSS_ENABLE_REFLECT OFF)
+  set(SPIRV_CROSS_ENABLE_C_API ON)
+  set(SPIRV_CROSS_ENABLE_UTIL OFF)
+  add_subdirectory(third_party/SPIRV-Cross)
+  set(SPIRV_CROSS_LIBRARIES "spirv-cross-c")
+
   list(APPEND EMSCRIPTEN_OPTIONS "USE_SDL=2")
   list(APPEND EMSCRIPTEN_OPTIONS "FULL_ES3=1")
   list(APPEND EMSCRIPTEN_OPTIONS "GL_ASSERTIONS=1")
   set(OPENGL_LIBRARIES "-s USE_WEBGL2=1")
 else()
+  find_package(spirv_cross_c_shared REQUIRED)
+  set(SPIRV_CROSS_LIBRARIES "spirv-cross-c-shared")
   find_package(SDL2 REQUIRED COMPONENTS SDL2::SDL2)
   set(SDL2_LIBRARIES SDL2::SDL2)
 endif()
@@ -174,6 +195,7 @@ target_link_libraries(
     ${OPENGL_LIBRARIES}
     ${WEBGPU_LIBRARIES}
     ${VULKAN_LIBRARIES}
+    ${SPIRV_CROSS_LIBRARIES}
 )
 if(EMSCRIPTEN)
   add_compile_definitions(scegfx PRIVATE SCEGFX_SUPPORTS_VULKAN=0)

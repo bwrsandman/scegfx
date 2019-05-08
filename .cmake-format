@@ -51,6 +51,11 @@ additional_commands = {
     "kwargs": {
       "SPIRV_COMPILATION": 4
     }
+  },
+  "mark_for_spirv_compilation": {
+    "kwargs": {
+      "SHADERS": "+"
+    }
   }
 #  "target_sources": {
 #    "kwargs": {

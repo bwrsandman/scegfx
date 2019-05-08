@@ -11,6 +11,7 @@
 #endif
 
 #include <SDL_video.h>
+#include <spirv_cross_c.h>
 
 #include <scegfx/context.h>
 
@@ -25,9 +26,22 @@ enum
   SCEGFX_OPENGL_MAX_EXTENSION_COUNT = 512
 };
 
+typedef void (*PFNGLSPECIALIZESHADERPROC)(uint32_t shader,
+                                          const char* pEntryPoint,
+                                          uint32_t numSpecializationConstants,
+                                          const uint32_t* pConstantIndex,
+                                          const uint32_t* pConstantValue);
+
 typedef struct scegfx_context_opengl_t
 {
   scegfx_context_t super;
+  spvc_context spvc;
+#if !defined(EMSCRIPTEN)
+  struct
+  {
+    PFNGLSPECIALIZESHADERPROC SpecializeShader;
+  } functions;
+#endif
   uint32_t extension_count;
   char extension_names[SCEGFX_OPENGL_MAX_EXTENSION_COUNT]
                       [SCEGFX_OPENGL_MAX_EXTENSION_STRING_SIZE];
@@ -169,6 +183,15 @@ scegfx_context_opengl_destroy_command_buffer(scegfx_context_t* super,
                                              scegfx_command_buffer_t* queue,
                                              scegfx_allocator_t* allocator);
 
+scegfx_shader_module_t*
+scegfx_context_opengl_create_shader_module(scegfx_context_t* this,
+                                           scegfx_allocator_t* allocator);
+void
+scegfx_context_opengl_destroy_shader_module(
+  scegfx_context_t* this,
+  scegfx_shader_module_t* shader_module,
+  scegfx_allocator_t* allocator);
+
 bool
 scegfx_context_opengl_make_current(scegfx_context_t* this);
 bool
@@ -217,6 +240,8 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_opengl = {
   .destroy_framebuffer = scegfx_context_opengl_destroy_framebuffer,
   .create_command_buffer = scegfx_context_opengl_create_command_buffer,
   .destroy_command_buffer = scegfx_context_opengl_destroy_command_buffer,
+  .create_shader_module = scegfx_context_opengl_create_shader_module,
+  .destroy_shader_module = scegfx_context_opengl_destroy_shader_module,
   .make_current = scegfx_context_opengl_make_current,
   .submit_to_queue = scegfx_context_opengl_submit_to_queue,
   .present = scegfx_context_opengl_present,

@@ -32,6 +32,21 @@ typedef enum scegfx_memory_properties_t
   scegfx_memory_properties_protected = 0x0020u,
 } scegfx_memory_properties_t;
 
+typedef enum scegfx_stage_type_t
+{
+  scegfx_stage_type_vertex = 0x00000001,
+  scegfx_stage_type_tessellation_control = 0x00000002,
+  scegfx_stage_type_tessellation_evaluation = 0x00000004,
+  scegfx_stage_type_geometry = 0x00000008,
+  scegfx_stage_type_fragment = 0x00000010,
+  scegfx_stage_type_compute = 0x00000020,
+  scegfx_stage_type_raygen = 0x00000100,
+  scegfx_stage_type_any_hit = 0x00000200,
+  scegfx_stage_type_closest_hit = 0x00000400,
+  scegfx_stage_type_miss = 0x00000800,
+  scegfx_stage_type_intersection = 0x00001000,
+} scegfx_stage_type_t;
+
 typedef enum scegfx_image_aspect_t
 {
   scegfx_image_aspect_color = 0x0001,

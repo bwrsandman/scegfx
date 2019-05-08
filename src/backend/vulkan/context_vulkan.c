@@ -17,6 +17,7 @@
 #include "render_pass_vulkan.h"
 #include "sampler_vulkan.h"
 #include "semaphore_vulkan.h"
+#include "shader_module_vulkan.h"
 #include "swapchain_vulkan.h"
 
 const char* requested_instance_extension_names[] = {
@@ -1194,6 +1195,39 @@ scegfx_context_vulkan_destroy_command_buffer(scegfx_context_t* super,
     free(queue);
   } else {
     allocator->allocator_callback(queue, 0, allocator->user_data);
+  }
+}
+
+scegfx_shader_module_t*
+scegfx_context_vulkan_create_shader_module(scegfx_context_t* super,
+                                           scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_shader_module_t* shader_module = NULL;
+  if (allocator == NULL)
+    shader_module = malloc(sizeof(scegfx_shader_module_vulkan_t));
+  else
+    shader_module = allocator->allocator_callback(
+      NULL, sizeof(scegfx_shader_module_vulkan_t), allocator->user_data);
+  memset(shader_module, 0, sizeof(scegfx_shader_module_vulkan_t));
+
+  shader_module->api_vtable = &scegfx_shader_module_api_vtable_vulkan;
+  shader_module->context = super;
+
+  return shader_module;
+}
+
+void
+scegfx_context_vulkan_destroy_shader_module(
+  scegfx_context_t* this,
+  scegfx_shader_module_t* shader_module,
+  scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(shader_module);
+  } else {
+    allocator->allocator_callback(shader_module, 0, allocator->user_data);
   }
 }
 

@@ -14,6 +14,7 @@
 #include <scegfx/image_view.h>
 #include <scegfx/render_pass.h>
 #include <scegfx/semaphore.h>
+#include <scegfx/shader_module.h>
 #include <scegfx/swapchain.h>
 
 #if defined(EMSCRIPTEN)
@@ -370,6 +371,75 @@ encode_commands()
   }
 }
 
+bool
+init_pipeline()
+{
+  const char* base_path = SDL_GetBasePath();
+  scegfx_shader_module_t* vert_module =
+    app.context->api_vtable->create_shader_module(app.context, NULL);
+  {
+    char filename[FILENAME_MAX];
+    sprintf(filename, "%shello_scegfx.vert.glsl.spv", base_path);
+    FILE* file = fopen(filename, "r");
+    fseek(file, 0L, SEEK_END);
+    size_t size = ftell(file);
+    rewind(file);
+    char* shader_src = malloc(size);
+    fread(shader_src, size, size, file);
+    fclose(file);
+    scegfx_shader_module_create_info_t info = {
+      .type = scegfx_stage_type_vertex,
+      .fix_vertex_y = true,
+      .entry_point = "main",
+      .size = size,
+      .shader_src = shader_src,
+    };
+    bool initialized = vert_module->api_vtable->initialize(vert_module, &info);
+    free(shader_src);
+    if (!initialized) {
+      fprintf(stderr, "error: could initialize shader for %s\n", filename);
+      assert(initialized);
+      return false;
+    }
+  }
+  scegfx_shader_module_t* frag_module =
+    app.context->api_vtable->create_shader_module(app.context, NULL);
+  {
+    char filename[FILENAME_MAX];
+    sprintf(filename, "%shello_scegfx.frag.glsl.spv", base_path);
+    FILE* file = fopen(filename, "r");
+    fseek(file, 0L, SEEK_END);
+    size_t size = ftell(file);
+    rewind(file);
+    char* shader_src = malloc(size);
+    fread(shader_src, size, size, file);
+    fclose(file);
+    scegfx_shader_module_create_info_t info = {
+      .type = scegfx_stage_type_fragment,
+      .entry_point = "main",
+      .size = size,
+      .shader_src = shader_src,
+    };
+    bool initialized = frag_module->api_vtable->initialize(frag_module, &info);
+    free(shader_src);
+    if (!initialized) {
+      fprintf(stderr, "error: could initialize shader for %s\n", filename);
+      assert(initialized);
+      return false;
+    }
+  }
+  SDL_free((void*)base_path);
+
+  vert_module->api_vtable->terminate(vert_module);
+  frag_module->api_vtable->terminate(frag_module);
+  app.context->api_vtable->destroy_shader_module(
+    app.context, vert_module, NULL);
+  app.context->api_vtable->destroy_shader_module(
+    app.context, frag_module, NULL);
+
+  return true;
+}
+
 void
 run_app()
 {
@@ -520,7 +590,9 @@ main(int argc, char* argv[])
   init_synchronization_primitives();
   init_render_pass();
   init_framebuffer();
-
+  if (!init_pipeline()) {
+    return 1;
+  }
   encode_commands();
 
   run_app();

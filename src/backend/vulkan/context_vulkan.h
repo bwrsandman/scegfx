@@ -133,6 +133,14 @@ void
 scegfx_context_vulkan_destroy_semaphore(scegfx_context_t* this,
                                         scegfx_semaphore_t* semaphore,
                                         scegfx_allocator_t* allocator);
+scegfx_shader_module_t*
+scegfx_context_vulkan_create_shader_module(scegfx_context_t* this,
+                                           scegfx_allocator_t* allocator);
+void
+scegfx_context_vulkan_destroy_shader_module(
+  scegfx_context_t* this,
+  scegfx_shader_module_t* shader_module,
+  scegfx_allocator_t* allocator);
 
 scegfx_image_t*
 scegfx_context_vulkan_create_image(scegfx_context_t* this,
@@ -235,6 +243,8 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_vulkan = {
   .destroy_framebuffer = scegfx_vulkan_destroy_framebuffer,
   .create_command_buffer = scegfx_context_vulkan_create_command_buffer,
   .destroy_command_buffer = scegfx_context_vulkan_destroy_command_buffer,
+  .create_shader_module = scegfx_context_vulkan_create_shader_module,
+  .destroy_shader_module = scegfx_context_vulkan_destroy_shader_module,
   .make_current = scegfx_context_vulkan_make_current,
   .submit_to_queue = scegfx_context_vulkan_submit_to_queue,
   .present = scegfx_context_vulkan_present,

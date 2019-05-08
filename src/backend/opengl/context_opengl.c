@@ -20,6 +20,7 @@
 #include "render_pass_opengl.h"
 #include "sampler_opengl.h"
 #include "semaphore_opengl.h"
+#include "shader_module_opengl.h"
 #include "swapchain_opengl.h"
 
 #define GL_MAX_CLIENT_WAIT_TIMEOUT_WEBGL 0x9247
@@ -98,6 +99,17 @@ scegfx_backend_opengl_debug_callback(GLenum source,
 }
 #endif
 
+void
+scegfx_backend_opengl_spvc_debug_callback(void* user_data, const char* msg)
+{
+  if (user_data == NULL || !msg || msg[0] == 0)
+    return;
+  const scegfx_context_opengl_t* this = user_data;
+
+  this->super.debug_callback(
+    scegfx_debug_severity_info, 0, "SPIRV-Cross", /*severity_string,*/ msg);
+}
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
 bool
@@ -106,6 +118,12 @@ scegfx_context_opengl_initialize(scegfx_context_t* super)
 #pragma clang diagnostic pop
   assert(!super->initialized);
   scegfx_context_opengl_t* this = (scegfx_context_opengl_t*)super;
+
+  spvc_result result;
+  result = spvc_context_create(&this->spvc);
+  assert(result == SPVC_SUCCESS);
+  spvc_context_set_error_callback(
+    this->spvc, scegfx_backend_opengl_spvc_debug_callback, this);
 
   char message[0x100];
 #if defined(EMSCRIPTEN)
@@ -205,6 +223,17 @@ scegfx_context_opengl_initialize(scegfx_context_t* super)
 
   SDL_GL_SetSwapInterval(0);
 
+#if !defined(EMSCRIPTEN)
+  this->functions.SpecializeShader =
+    (PFNGLSPECIALIZESHADERPROC)SDL_GL_GetProcAddress("glSpecializeShader");
+  if (this->functions.SpecializeShader == NULL) {
+    this->super.debug_callback(scegfx_debug_severity_error,
+                               __LINE__,
+                               FILE_BASENAME,
+                               "Unable to get glSpecializeShader");
+  }
+#endif
+
   super->initialized = true;
   return true;
 }
@@ -213,11 +242,15 @@ void
 scegfx_context_opengl_terminate(scegfx_context_t* super)
 {
   assert(super->initialized);
+  scegfx_context_opengl_t* this = (scegfx_context_opengl_t*)super;
+
 #if defined(EMSCRIPTEN)
   emscripten_webgl_destroy_context(webgl_handle);
 #else
   SDL_GL_DeleteContext(sdl_handle);
 #endif
+  spvc_context_destroy(this->spvc);
+
   super->initialized = false;
 }
 
@@ -831,6 +864,39 @@ scegfx_context_opengl_destroy_command_buffer(scegfx_context_t* super,
     free(queue);
   } else {
     allocator->allocator_callback(queue, 0, allocator->user_data);
+  }
+}
+
+scegfx_shader_module_t*
+scegfx_context_opengl_create_shader_module(scegfx_context_t* super,
+                                           scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_shader_module_t* shader_module = NULL;
+  if (allocator == NULL)
+    shader_module = malloc(sizeof(scegfx_shader_module_opengl_t));
+  else
+    shader_module = allocator->allocator_callback(
+      NULL, sizeof(scegfx_shader_module_opengl_t), allocator->user_data);
+  memset(shader_module, 0, sizeof(scegfx_shader_module_opengl_t));
+
+  shader_module->api_vtable = &scegfx_shader_module_api_vtable_opengl;
+  shader_module->context = super;
+
+  return shader_module;
+}
+
+void
+scegfx_context_opengl_destroy_shader_module(
+  scegfx_context_t* this,
+  scegfx_shader_module_t* shader_module,
+  scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(shader_module);
+  } else {
+    allocator->allocator_callback(shader_module, 0, allocator->user_data);
   }
 }
 
