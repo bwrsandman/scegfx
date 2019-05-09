@@ -48,6 +48,35 @@ typedef union scegfx_command_arg_t
     int32_t vertex_offset;
     uint32_t first_instance;
   } draw_indexed;
+  struct
+  {
+    uint32_t src_buffer_handle;
+    uint32_t src_target;
+    uint32_t dst_buffer_handle;
+    uint32_t dst_target;
+    scegfx_buffer_copy_t region;
+  } copy_buffer;
+  struct
+  {
+    uint32_t buffer_handle;
+    uint32_t image_handle;
+    uint32_t image_target;
+    uint32_t image_format;
+    uint32_t image_type;
+    scegfx_buffer_image_copy_t region;
+  } copy_buffer_to_image;
+  struct
+  {
+    uint32_t src_image_handle;
+    uint32_t src_image_format;
+    uint32_t dst_image_handle;
+    uint32_t dst_image_format;
+    scegfx_image_copy_t region;
+  } copy_image;
+  struct
+  {
+    uint32_t barriers;
+  } memory_barrier;
   scegfx_debug_marker_info_t debug_maker_info;
 } scegfx_command_arg_t;
 
@@ -65,6 +94,29 @@ void
 scegfx_command_opengl_draw(const scegfx_command_arg_t* arg);
 void
 scegfx_command_opengl_draw_indexed(const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_copy_buffer(const scegfx_command_arg_t* arg);
+#if !defined(EMSCRIPTEN)
+void
+scegfx_command_opengl_copy_buffer_to_image_1d(const scegfx_command_arg_t* arg);
+#endif // !defined(EMSCRIPTEN)
+void
+scegfx_command_opengl_copy_buffer_to_image_2d(const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_copy_buffer_to_image_3d(const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_copy_image_to_buffer(const scegfx_command_arg_t* arg);
+#if defined(EMSCRIPTEN)
+void
+scegfx_command_opengl_copy_texture_2d(const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_copy_texture_3d(const scegfx_command_arg_t* arg);
+#else
+void
+scegfx_command_opengl_copy_image(const scegfx_command_arg_t* arg);
+#endif // define(EMSCRIPTEN)
+void
+scegfx_command_opengl_memory_barrier(const scegfx_command_arg_t* arg);
 void
 scegfx_command_opengl_debug_marker_begin(const scegfx_command_arg_t* arg);
 void

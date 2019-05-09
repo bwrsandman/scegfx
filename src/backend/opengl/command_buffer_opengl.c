@@ -9,10 +9,13 @@
 
 #include <SDL_opengl.h>
 
+#include <scegfx/device_memory.h>
+
 #include "buffer_opengl.h"
 #include "commands_opengl.h"
 #include "context_opengl.h"
 #include "framebuffer_opengl.h"
+#include "image_opengl.h"
 #include "pipeline_opengl.h"
 #include "render_pass_opengl.h"
 #include "vao_map.h"
@@ -431,6 +434,236 @@ scegfx_command_buffer_opengl_draw_indexed(scegfx_command_buffer_t* super,
 
   ++this->count;
 }
+
+void
+scegfx_command_buffer_opengl_copy_buffer(scegfx_command_buffer_t* super,
+                                         const scegfx_buffer_t* src_buffer,
+                                         const scegfx_buffer_t* dst_buffer,
+                                         const scegfx_buffer_copy_t* region)
+{
+  assert(super->initialized);
+  assert(src_buffer->initialized);
+  assert(dst_buffer->initialized);
+  assert(region);
+
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  scegfx_buffer_opengl_t* src_buffer_gl = (scegfx_buffer_opengl_t*)src_buffer;
+  scegfx_buffer_opengl_t* dst_buffer_gl = (scegfx_buffer_opengl_t*)dst_buffer;
+
+  assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+
+  this->commands[this->count] = scegfx_command_opengl_copy_buffer;
+  this->args[this->count].copy_buffer.src_buffer_handle = src_buffer_gl->handle;
+  this->args[this->count].copy_buffer.src_target = GL_COPY_READ_BUFFER;
+  this->args[this->count].copy_buffer.dst_buffer_handle = dst_buffer_gl->handle;
+  this->args[this->count].copy_buffer.dst_target = GL_COPY_WRITE_BUFFER;
+  this->args[this->count].copy_buffer.region = *region;
+
+  ++this->count;
+}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wunused-variable"
+void
+scegfx_command_buffer_opengl_copy_image(scegfx_command_buffer_t* super,
+                                        const scegfx_image_t* src_image,
+                                        scegfx_image_layout_t src_image_layout,
+                                        const scegfx_image_t* dst_image,
+                                        scegfx_image_layout_t dst_image_layout,
+                                        const scegfx_image_copy_t* region)
+{
+  assert(super->initialized);
+  assert(src_image->initialized);
+  assert(dst_image->initialized);
+  assert(src_image->type == dst_image->type);
+  assert(region);
+  assert(region->src_subresource.mip_level ==
+         region->dst_subresource.mip_level);
+
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  scegfx_image_opengl_t* src_image_gl = (scegfx_image_opengl_t*)src_image;
+  scegfx_image_opengl_t* dst_image_gl = (scegfx_image_opengl_t*)dst_image;
+
+#if defined(EMSCRIPTEN)
+  switch (src_image_gl->super.type) {
+    case scegfx_image_type_2d:
+      this->commands[this->count] = scegfx_command_opengl_copy_texture_2d;
+      break;
+    case scegfx_image_type_3d:
+      this->commands[this->count] = scegfx_command_opengl_copy_texture_3d;
+      break;
+    default:
+      assert(false);
+      return;
+  }
+#else
+  this->commands[this->count] = scegfx_command_opengl_copy_image;
+#endif // defined(EMSCRIPTEN)
+  this->args[this->count].copy_image.src_image_handle = src_image_gl->handle;
+  this->args[this->count].copy_image.dst_image_handle = dst_image_gl->handle;
+  this->args[this->count].copy_image.region = *region;
+
+  ++this->count;
+}
+
+void
+scegfx_command_buffer_opengl_blit_image(scegfx_command_buffer_t* super,
+                                        const scegfx_image_t* src_image,
+                                        scegfx_image_layout_t src_image_layout,
+                                        const scegfx_image_t* dst_image,
+                                        scegfx_image_layout_t dst_image_layout,
+                                        const scegfx_image_blit_t* region)
+{
+  assert(super->initialized);
+  assert(src_image->initialized);
+  assert(dst_image->initialized);
+  assert(region);
+
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  scegfx_image_opengl_t* src_image_gl = (scegfx_image_opengl_t*)src_image;
+  scegfx_image_opengl_t* dst_image_gl = (scegfx_image_opengl_t*)dst_image;
+
+  assert(false);
+}
+
+void
+scegfx_command_buffer_opengl_copy_buffer_to_image(
+  scegfx_command_buffer_t* super,
+  const scegfx_buffer_t* buffer,
+  const scegfx_image_t* image,
+  scegfx_image_layout_t image_layout,
+  const scegfx_buffer_image_copy_t* region)
+{
+  assert(super->initialized);
+  assert(buffer->initialized);
+  assert(image->initialized);
+  assert(region);
+
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  scegfx_buffer_opengl_t* buffer_gl = (scegfx_buffer_opengl_t*)buffer;
+  scegfx_image_opengl_t* image_gl = (scegfx_image_opengl_t*)image;
+
+  assert(region->image_offset.x == 0);
+  assert(region->image_offset.y == 0);
+  assert(region->image_offset.z == 0);
+  scegfx_device_size_t dst_offset = 0;
+
+  assert(region->image_extent.width == image->extent.width);
+  assert(region->image_extent.height == image->extent.height);
+  assert(region->image_extent.depth == 1);
+
+  scegfx_device_memory_requirements_t memory_requirements;
+  super->context->api_vtable->get_image_memory_requirements(
+    super->context, image, &memory_requirements);
+
+  // Copy buffer to buffer texture
+  scegfx_buffer_copy_t buffer_region = {
+    .src_offset = region->buffer_offset,
+    .dst_offset = dst_offset,
+    .size = memory_requirements.size,
+  };
+  assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+  assert(buffer_gl->handle);
+  assert(image_gl->handle);
+
+  switch (image_gl->super.type) {
+    case scegfx_image_type_1d:
+#if defined(EMSCRIPTEN)
+      assert(false);
+      return;
+#else
+      this->commands[this->count] =
+        scegfx_command_opengl_copy_buffer_to_image_1d;
+      break;
+#endif
+    case scegfx_image_type_2d:
+      this->commands[this->count] =
+        scegfx_command_opengl_copy_buffer_to_image_2d;
+      break;
+    case scegfx_image_type_3d:
+      this->commands[this->count] =
+        scegfx_command_opengl_copy_buffer_to_image_3d;
+      break;
+    default:
+      assert(false);
+      return;
+  }
+
+  this->args[this->count].copy_buffer_to_image.buffer_handle =
+    buffer_gl->handle;
+  this->args[this->count].copy_buffer_to_image.image_handle = image_gl->handle;
+  this->args[this->count].copy_buffer_to_image.image_target = image_gl->target;
+  this->args[this->count].copy_buffer_to_image.image_format = GL_RGBA;
+  this->args[this->count].copy_buffer_to_image.image_type = GL_UNSIGNED_BYTE;
+  this->args[this->count].copy_buffer_to_image.region = *region;
+
+  ++this->count;
+}
+
+void
+scegfx_command_buffer_opengl_copy_image_to_buffer(
+  scegfx_command_buffer_t* super,
+  const scegfx_image_t* image,
+  scegfx_image_layout_t image_layout,
+  const scegfx_buffer_t* buffer,
+  const scegfx_buffer_image_copy_t* region)
+{
+  assert(super->initialized);
+  assert(image->initialized);
+  assert(buffer->initialized);
+  assert(region);
+
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  scegfx_buffer_opengl_t* buffer_gl = (scegfx_buffer_opengl_t*)buffer;
+  scegfx_image_opengl_t* image_gl = (scegfx_image_opengl_t*)image;
+
+  assert(region->image_offset.x == 0);
+  assert(region->image_offset.y == 0);
+  assert(region->image_offset.z == 0);
+  scegfx_device_size_t src_offset = 0;
+
+  assert(region->image_extent.width == image->extent.width);
+  assert(region->image_extent.height == image->extent.height);
+  assert(region->image_extent.depth == 1);
+
+  scegfx_device_memory_requirements_t memory_requirements;
+  super->context->api_vtable->get_image_memory_requirements(
+    super->context, image, &memory_requirements);
+
+  assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+  assert(image_gl->handle);
+  this->commands[this->count] = scegfx_command_opengl_copy_image_to_buffer;
+  ++this->count;
+}
+
+void
+scegfx_command_buffer_opengl_pipeline_barrier(
+  scegfx_command_buffer_t* super,
+  scegfx_pipeline_stage_t src_stage_mask,
+  scegfx_pipeline_stage_t dst_stage_mask,
+  uint32_t image_memory_barrier_count,
+  const scegfx_image_memory_barrier_t* image_memory_barriers)
+{
+  assert(super->initialized);
+  assert(image_memory_barriers);
+#if !defined(EMSCRIPTEN)
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+
+  assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+
+  GLbitfield barriers = 0;
+  if (image_memory_barrier_count) {
+    barriers |= GL_TEXTURE_UPDATE_BARRIER_BIT;
+  }
+
+  this->commands[this->count] = scegfx_command_opengl_memory_barrier;
+  this->args[this->count].memory_barrier.barriers = barriers;
+
+  ++this->count;
+#endif
+}
+#pragma clang diagnostic pop
 
 void
 scegfx_command_buffer_opengl_debug_marker_begin(

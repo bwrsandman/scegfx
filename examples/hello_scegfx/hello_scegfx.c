@@ -530,15 +530,15 @@ init_geometry_buffer(scegfx_device_size_t buffer_size,
 {
   scegfx_buffer_t* buffer =
     app.context->api_vtable->create_buffer(app.context, NULL);
-  buffer->api_vtable->initialize(buffer, buffer_size, usage);
+  buffer->api_vtable->initialize(
+    buffer, buffer_size, usage | scegfx_buffer_usage_transfer_dst);
   scegfx_device_memory_requirements_t memory_requirements = {};
   app.context->api_vtable->get_buffer_memory_requirements(
     app.context, buffer, &memory_requirements);
   uint32_t memory_type_index = app.context->api_vtable->get_memory_type(
     app.context,
     memory_requirements.memory_type_bits,
-    scegfx_memory_properties_host_visible |
-      scegfx_memory_properties_host_coherent);
+    scegfx_memory_properties_device_local);
   scegfx_device_memory_allocate_info_t info = {
     .allocation_size = memory_requirements.size,
     .memory_type_index = memory_type_index,
@@ -547,11 +547,66 @@ init_geometry_buffer(scegfx_device_size_t buffer_size,
     app.context->api_vtable->allocate_memory(app.context, &info, NULL);
   app.context->api_vtable->bind_buffer_memory(
     app.context, buffer, buffer_memory, 0);
+
+  scegfx_buffer_t* staging_buffer =
+    app.context->api_vtable->create_buffer(app.context, NULL);
+  staging_buffer->api_vtable->initialize(
+    staging_buffer, buffer_size, scegfx_buffer_usage_transfer_src);
+
+  app.context->api_vtable->get_buffer_memory_requirements(
+    app.context, staging_buffer, &memory_requirements);
+  uint32_t memory_type = app.context->api_vtable->get_memory_type(
+    app.context,
+    memory_requirements.memory_type_bits,
+    scegfx_memory_properties_host_visible |
+      scegfx_memory_properties_host_coherent);
+  scegfx_device_memory_allocate_info_t memory_info = {
+    .allocation_size = memory_requirements.size,
+    .memory_type_index = memory_type,
+  };
+  scegfx_device_memory_t* staging_memory =
+    app.context->api_vtable->allocate_memory(app.context, &memory_info, NULL);
+
   void* mapped = NULL;
   app.context->api_vtable->map_memory(
-    app.context, buffer_memory, 0, buffer_size, &mapped);
+    app.context, staging_memory, 0, buffer_size, &mapped);
   memcpy(mapped, data, buffer_size);
-  app.context->api_vtable->unmap_memory(app.context, buffer_memory);
+  app.context->api_vtable->unmap_memory(app.context, staging_memory);
+
+  app.context->api_vtable->bind_buffer_memory(
+    app.context, staging_buffer, staging_memory, 0);
+
+  scegfx_command_buffer_t* staging_command_buffer =
+    app.context->api_vtable->create_command_buffer(app.context, NULL);
+  staging_command_buffer->api_vtable->initialize(staging_command_buffer);
+  staging_command_buffer->api_vtable->begin(staging_command_buffer, false);
+  scegfx_buffer_copy_t region = {
+    .src_offset = 0,
+    .dst_offset = 0,
+    .size = buffer_size,
+  };
+  staging_command_buffer->api_vtable->copy_buffer(
+    staging_command_buffer, staging_buffer, buffer, &region);
+  staging_command_buffer->api_vtable->end(staging_command_buffer);
+  scegfx_submit_info_t submit_info = {
+    .command_buffer = staging_command_buffer,
+  };
+  scegfx_fence_t* staging_fence =
+    app.context->api_vtable->create_fence(app.context, NULL);
+  staging_fence->api_vtable->initialize(staging_fence, false);
+  app.context->api_vtable->submit_to_queue(
+    app.context, &submit_info, staging_fence);
+  if (!staging_fence->api_vtable->wait(staging_fence, UINT64_MAX)) {
+    fprintf(stderr, "error: could not wait on staging fence\n");
+  }
+  staging_command_buffer->api_vtable->terminate(staging_command_buffer);
+  app.context->api_vtable->destroy_command_buffer(
+    app.context, staging_command_buffer, NULL);
+  staging_fence->api_vtable->terminate(staging_fence);
+  app.context->api_vtable->destroy_fence(app.context, staging_fence, NULL);
+  app.context->api_vtable->free_memory(app.context, staging_memory, NULL);
+  staging_buffer->api_vtable->terminate(staging_buffer);
+  app.context->api_vtable->destroy_buffer(app.context, staging_buffer, NULL);
 
   *out_buffer = buffer;
   *out_buffer_memory = buffer_memory;

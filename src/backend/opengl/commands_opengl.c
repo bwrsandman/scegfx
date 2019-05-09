@@ -86,6 +86,175 @@ scegfx_command_opengl_draw_indexed(const scegfx_command_arg_t* arg)
 }
 
 void
+scegfx_command_opengl_copy_buffer(const scegfx_command_arg_t* arg)
+{
+  glBindBuffer(arg->copy_buffer.src_target, arg->copy_buffer.src_buffer_handle);
+  glBindBuffer(arg->copy_buffer.dst_target, arg->copy_buffer.dst_buffer_handle);
+  glCopyBufferSubData(arg->copy_buffer.src_target,
+                      arg->copy_buffer.dst_target,
+                      arg->copy_buffer.region.src_offset,
+                      arg->copy_buffer.region.dst_offset,
+                      arg->copy_buffer.region.size);
+}
+
+#if !defined(EMSCRIPTEN)
+void
+scegfx_command_opengl_copy_buffer_to_image_1d(const scegfx_command_arg_t* arg)
+{
+  glBindTexture(arg->copy_buffer_to_image.image_target,
+                arg->copy_buffer_to_image.image_handle);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, arg->copy_buffer_to_image.buffer_handle);
+  glTexSubImage1D(
+    arg->copy_buffer_to_image.image_target,
+    arg->copy_buffer_to_image.region.image_subresource.mip_level,
+    arg->copy_buffer_to_image.region.image_offset.x,
+    arg->copy_buffer_to_image.region.image_extent.width,
+    arg->copy_buffer_to_image.image_format,
+    arg->copy_buffer_to_image.image_type,
+    (void*)(uintptr_t)arg->copy_buffer_to_image.region.buffer_offset);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+}
+#endif // !defined(EMSCRIPTEN)
+
+void
+scegfx_command_opengl_copy_buffer_to_image_2d(const scegfx_command_arg_t* arg)
+{
+  glBindTexture(arg->copy_buffer_to_image.image_target,
+                arg->copy_buffer_to_image.image_handle);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, arg->copy_buffer_to_image.buffer_handle);
+  glTexSubImage2D(
+    arg->copy_buffer_to_image.image_target,
+    arg->copy_buffer_to_image.region.image_subresource.mip_level,
+    arg->copy_buffer_to_image.region.image_offset.x,
+    arg->copy_buffer_to_image.region.image_offset.y,
+    arg->copy_buffer_to_image.region.image_extent.width,
+    arg->copy_buffer_to_image.region.image_extent.height,
+    arg->copy_buffer_to_image.image_format,
+    arg->copy_buffer_to_image.image_type,
+    (void*)(uintptr_t)arg->copy_buffer_to_image.region.buffer_offset);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+}
+
+void
+scegfx_command_opengl_copy_buffer_to_image_3d(const scegfx_command_arg_t* arg)
+{
+  glBindTexture(arg->copy_buffer_to_image.image_target,
+                arg->copy_buffer_to_image.image_handle);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, arg->copy_buffer_to_image.buffer_handle);
+  glTexSubImage3D(
+    arg->copy_buffer_to_image.image_target,
+    arg->copy_buffer_to_image.region.image_subresource.mip_level,
+    arg->copy_buffer_to_image.region.image_offset.x,
+    arg->copy_buffer_to_image.region.image_offset.y,
+    arg->copy_buffer_to_image.region.image_offset.z,
+    arg->copy_buffer_to_image.region.image_extent.width,
+    arg->copy_buffer_to_image.region.image_extent.height,
+    arg->copy_buffer_to_image.region.image_extent.depth,
+    arg->copy_buffer_to_image.image_format,
+    arg->copy_buffer_to_image.image_type,
+    (void*)(uintptr_t)arg->copy_buffer_to_image.region.buffer_offset);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+}
+
+void
+scegfx_command_opengl_copy_image_to_buffer(const scegfx_command_arg_t* arg)
+{
+  assert(arg);
+  assert(false);
+}
+
+#if defined(EMSCRIPTEN)
+void
+scegfx_command_opengl_copy_texture_2d(const scegfx_command_arg_t* arg)
+{
+  assert(arg->copy_image.region.src_subresource.mip_level ==
+         arg->copy_image.region.dst_subresource.mip_level);
+  assert(arg->copy_image.region.src_offset.x ==
+           arg->copy_image.region.dst_offset.x ||
+         arg->copy_image.region.src_offset.y ==
+           arg->copy_image.region.dst_offset.y);
+  glBindTexture(GL_TEXTURE_2D, arg->copy_image.src_image_handle);
+  glCopyTexSubImage2D(arg->copy_image.dst_image_handle,
+                      arg->copy_image.region.src_subresource.mip_level,
+                      0,
+                      0,
+                      arg->copy_image.region.src_offset.x,
+                      arg->copy_image.region.src_offset.y,
+                      arg->copy_image.region.extent.width,
+                      arg->copy_image.region.extent.height);
+}
+
+void
+scegfx_command_opengl_copy_texture_3d(const scegfx_command_arg_t* arg)
+{
+  assert(arg->copy_image.region.src_subresource.mip_level ==
+         arg->copy_image.region.dst_subresource.mip_level);
+  assert(arg->copy_image.region.src_offset.x ==
+           arg->copy_image.region.dst_offset.x ||
+         arg->copy_image.region.src_offset.y ==
+           arg->copy_image.region.dst_offset.y ||
+         arg->copy_image.region.src_offset.z ==
+           arg->copy_image.region.dst_offset.z);
+  glBindTexture(GL_TEXTURE_3D, arg->copy_image.src_image_handle);
+  glCopyTexSubImage3D(arg->copy_image.dst_image_handle,
+                      arg->copy_image.region.src_subresource.mip_level,
+                      0,
+                      0,
+                      arg->copy_image.region.src_offset.x,
+                      arg->copy_image.region.src_offset.y,
+                      // arg->copy_image.region.src_offset.z,
+                      arg->copy_image.region.extent.width,
+                      arg->copy_image.region.extent.height,
+                      arg->copy_image.region.extent.depth);
+}
+
+#else
+void
+scegfx_command_opengl_copy_image(const scegfx_command_arg_t* arg)
+{
+  assert(arg->copy_image.region.src_subresource.mip_level ==
+         arg->copy_image.region.dst_subresource.mip_level);
+  assert(arg->copy_image.region.src_offset.x ==
+           arg->copy_image.region.dst_offset.x ||
+         arg->copy_image.region.src_offset.y ==
+           arg->copy_image.region.dst_offset.y);
+  glBindTexture(GL_TEXTURE_BUFFER, arg->copy_image.src_image_handle);
+  glBindTexture(arg->copy_image.dst_image_format,
+                arg->copy_image.dst_image_handle);
+  glCopyTexSubImage2D(arg->copy_image.dst_image_handle,
+                      arg->copy_image.region.src_subresource.mip_level,
+                      0,
+                      0,
+                      arg->copy_image.region.src_offset.x,
+                      arg->copy_image.region.src_offset.y,
+                      arg->copy_image.region.extent.width,
+                      arg->copy_image.region.extent.height);
+
+  //  glCopyImageSubData(arg->copy_image.src_image_handle,
+  //                     arg->copy_image.src_image_format,
+  //                     arg->copy_image.region.src_subresource.mip_level,
+  //                     arg->copy_image.region.src_offset.x,
+  //                     arg->copy_image.region.src_offset.y,
+  //                     arg->copy_image.region.src_offset.z,
+  //                     arg->copy_image.dst_image_handle,
+  //                     arg->copy_image.dst_image_format,
+  //                     arg->copy_image.region.dst_subresource.mip_level,
+  //                     arg->copy_image.region.dst_offset.x,
+  //                     arg->copy_image.region.dst_offset.y,
+  //                     arg->copy_image.region.dst_offset.z,
+  //                     arg->copy_image.region.extent.width,
+  //                     arg->copy_image.region.extent.height,
+  //                     arg->copy_image.region.extent.depth);
+}
+#endif // define(EMSCRIPTEN)
+
+void
+scegfx_command_opengl_memory_barrier(const scegfx_command_arg_t* arg)
+{
+  glMemoryBarrier(arg->memory_barrier.barriers);
+}
+
+void
 scegfx_command_opengl_debug_marker_begin(const scegfx_command_arg_t* arg)
 {
   glPushDebugGroup(
