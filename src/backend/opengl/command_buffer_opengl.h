@@ -55,6 +55,16 @@ void
 scegfx_command_buffer_opengl_bind_pipeline(scegfx_command_buffer_t* this,
                                            scegfx_pipeline_type_t type,
                                            const scegfx_pipeline_t* pipeline);
+void
+scegfx_command_buffer_opengl_bind_vertex_buffer(scegfx_command_buffer_t* super,
+                                                const scegfx_buffer_t* buffer,
+                                                scegfx_device_size_t offset);
+void
+scegfx_command_buffer_opengl_bind_index_buffer(
+  scegfx_command_buffer_t* this,
+  const scegfx_buffer_t* buffer,
+  const scegfx_device_size_t offset,
+  scegfx_index_type_t index_type);
 
 void
 scegfx_command_buffer_opengl_draw(scegfx_command_buffer_t* this,
@@ -86,6 +96,8 @@ const static scegfx_command_buffer_api_vtable_t
     .begin_render_pass = scegfx_command_buffer_opengl_begin_render_pass,
     .end_render_pass = scegfx_command_buffer_opengl_end_render_pass,
     .bind_pipeline = scegfx_command_buffer_opengl_bind_pipeline,
+    .bind_vertex_buffer = scegfx_command_buffer_opengl_bind_vertex_buffer,
+    .bind_index_buffer = scegfx_command_buffer_opengl_bind_index_buffer,
     .draw = scegfx_command_buffer_opengl_draw,
     .draw_indexed = scegfx_command_buffer_opengl_draw_indexed,
     .debug_marker_begin = scegfx_command_buffer_opengl_debug_marker_begin,

@@ -39,6 +39,17 @@ scegfx_command_buffer_vulkan_bind_pipeline(scegfx_command_buffer_t* this,
                                            const scegfx_pipeline_t* pipeline);
 
 void
+scegfx_command_buffer_vulkan_bind_vertex_buffer(scegfx_command_buffer_t* super,
+                                                const scegfx_buffer_t* buffer,
+                                                scegfx_device_size_t offset);
+void
+scegfx_command_buffer_vulkan_bind_index_buffer(
+  scegfx_command_buffer_t* this,
+  const scegfx_buffer_t* buffer,
+  const scegfx_device_size_t offset,
+  scegfx_index_type_t index_type);
+
+void
 scegfx_command_buffer_vulkan_draw(scegfx_command_buffer_t* this,
                                   uint32_t vertex_count,
                                   uint32_t instance_count,
@@ -68,6 +79,8 @@ const static scegfx_command_buffer_api_vtable_t
     .begin_render_pass = scegfx_command_buffer_vulkan_begin_render_pass,
     .end_render_pass = scegfx_command_buffer_vulkan_end_render_pass,
     .bind_pipeline = scegfx_command_buffer_vulkan_bind_pipeline,
+    .bind_vertex_buffer = scegfx_command_buffer_vulkan_bind_vertex_buffer,
+    .bind_index_buffer = scegfx_command_buffer_vulkan_bind_index_buffer,
     .draw = scegfx_command_buffer_vulkan_draw,
     .draw_indexed = scegfx_command_buffer_vulkan_draw_indexed,
     .debug_marker_begin = scegfx_command_buffer_vulkan_debug_marker_begin,

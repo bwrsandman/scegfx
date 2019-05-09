@@ -9,6 +9,7 @@
 #include <SDL_opengl.h>
 #include <assert.h>
 
+#include "buffer_opengl.h"
 #include "command_buffer_opengl.h"
 #include "framebuffer_opengl.h"
 #include "pipeline_opengl.h"
@@ -37,6 +38,8 @@ scegfx_command_end_render_pass_opengl(const scegfx_command_arg_t* arg)
 {
   glBindVertexArray(0);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
 }
 
 void

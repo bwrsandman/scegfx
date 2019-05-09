@@ -30,9 +30,12 @@ endfunction()
 
 file(GLOB SHADERS hello_scegfx.vert.glsl hello_scegfx.frag.glsl)
 
-mark_for_spirv_compilation(SHADERS ${SHADERS})
+mark_for_spirv_compilation(
+  SHADERS ${SHADERS} BRIDGING_HEADERS bridging_header.h
+)
 
-add_executable(hello_scegfx hello_scegfx.c ${SHADERS})
+add_executable(hello_scegfx hello_scegfx.c ${SHADERS} bridging_header.h)
+target_compile_definitions(hello_scegfx PRIVATE SCEGFX_C_SOURCE)
 
 if(EMSCRIPTEN)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_SDL=2 --emrun")

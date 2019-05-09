@@ -11,6 +11,7 @@
 #include "common.h"
 #include "pipeline.h"
 
+typedef struct scegfx_buffer_t scegfx_buffer_t;
 typedef struct scegfx_command_buffer_t scegfx_command_buffer_t;
 typedef struct scegfx_context_t scegfx_context_t;
 typedef struct scegfx_framebuffer_t scegfx_framebuffer_t;
@@ -49,6 +50,14 @@ typedef struct scegfx_command_buffer_api_vtable_t
   void (*bind_pipeline)(scegfx_command_buffer_t* this,
                         scegfx_pipeline_type_t type,
                         const scegfx_pipeline_t* pipeline);
+
+  void (*bind_vertex_buffer)(scegfx_command_buffer_t* this,
+                             const scegfx_buffer_t* buffer,
+                             scegfx_device_size_t offset);
+  void (*bind_index_buffer)(scegfx_command_buffer_t* this,
+                            const scegfx_buffer_t* buffer,
+                            const scegfx_device_size_t offset,
+                            scegfx_index_type_t index_type);
 
   void (*draw)(scegfx_command_buffer_t* this,
                uint32_t vertex_count,

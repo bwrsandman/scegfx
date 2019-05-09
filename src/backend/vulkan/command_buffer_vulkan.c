@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "buffer_vulkan.h"
 #include "context_vulkan.h"
 #include "framebuffer_vulkan.h"
 #include "pipeline_vulkan.h"
@@ -159,6 +160,49 @@ scegfx_command_buffer_vulkan_bind_pipeline(scegfx_command_buffer_t* super,
   }
 
   vkCmdBindPipeline(this->handle, bind_point, pipeline_vk->handle);
+}
+
+void
+scegfx_command_buffer_vulkan_bind_vertex_buffer(scegfx_command_buffer_t* super,
+                                                const scegfx_buffer_t* buffer,
+                                                scegfx_device_size_t offset)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_vulkan_t* this = (scegfx_command_buffer_vulkan_t*)super;
+
+  VkBuffer vk_buffer;
+  assert(buffer->initialized);
+  vk_buffer = ((scegfx_buffer_vulkan_t*)buffer)->handle;
+
+  vkCmdBindVertexBuffers(this->handle, 0, 1, &vk_buffer, &offset);
+}
+
+void
+scegfx_command_buffer_vulkan_bind_index_buffer(
+  scegfx_command_buffer_t* super,
+  const scegfx_buffer_t* buffer,
+  const scegfx_device_size_t offset,
+  scegfx_index_type_t index_type)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_vulkan_t* this = (scegfx_command_buffer_vulkan_t*)super;
+  assert(buffer->initialized);
+  scegfx_buffer_vulkan_t* vk_buffer = (scegfx_buffer_vulkan_t*)buffer;
+
+  VkIndexType vk_index_type = VK_INDEX_TYPE_UINT32;
+  switch (index_type) {
+    case scegfx_index_type_u16:
+      vk_index_type = VK_INDEX_TYPE_UINT16;
+      break;
+    case scegfx_index_type_u32:
+      vk_index_type = VK_INDEX_TYPE_UINT32;
+      break;
+    default:
+      assert(0);
+      break;
+  }
+
+  vkCmdBindIndexBuffer(this->handle, vk_buffer->handle, offset, vk_index_type);
 }
 
 void

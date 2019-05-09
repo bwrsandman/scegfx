@@ -9,11 +9,13 @@
 
 #include <SDL_opengl.h>
 
+#include "buffer_opengl.h"
 #include "commands_opengl.h"
 #include "context_opengl.h"
 #include "framebuffer_opengl.h"
 #include "pipeline_opengl.h"
 #include "render_pass_opengl.h"
+#include "vao_map.h"
 
 bool
 scegfx_command_buffer_opengl_initialize(scegfx_command_buffer_t* super)
@@ -242,6 +244,36 @@ scegfx_command_buffer_opengl_bind_pipeline(scegfx_command_buffer_t* super,
   }
 
   ++this->count;
+}
+
+void
+scegfx_command_buffer_opengl_bind_vertex_buffer(scegfx_command_buffer_t* super,
+                                                const scegfx_buffer_t* buffer,
+                                                scegfx_device_size_t offset)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  scegfx_buffer_opengl_t* buffer_gl = (scegfx_buffer_opengl_t*)buffer;
+
+  this->vao_desc.vertex.handle = buffer_gl->handle;
+  this->vao_desc.vertex.offset = offset;
+}
+
+void
+scegfx_command_buffer_opengl_bind_index_buffer(scegfx_command_buffer_t* super,
+                                               const scegfx_buffer_t* buffer,
+                                               scegfx_device_size_t offset,
+                                               scegfx_index_type_t index_type)
+{
+
+  assert(super->initialized);
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  scegfx_buffer_opengl_t* buffer_gl = (scegfx_buffer_opengl_t*)buffer;
+
+  this->vao_desc.index.handle = buffer_gl->handle;
+  this->vao_desc.index.offset = offset;
+
+  this->index_type = index_type;
 }
 
 void

@@ -7,8 +7,10 @@
 
 #include <SDL2/SDL.h>
 
+#include <scegfx/buffer.h>
 #include <scegfx/command_buffer.h>
 #include <scegfx/context.h>
+#include <scegfx/device_memory.h>
 #include <scegfx/fence.h>
 #include <scegfx/framebuffer.h>
 #include <scegfx/image_view.h>
@@ -19,9 +21,13 @@
 #include <scegfx/shader_module.h>
 #include <scegfx/swapchain.h>
 
+#include "bridging_header.h"
+
 #if defined(EMSCRIPTEN)
 #include <emscripten/emscripten.h>
 #endif // defined(EMSCRIPTEN)
+
+#define countof(x) (sizeof((x)) / sizeof((x)[0]))
 
 typedef struct args_t
 {
@@ -36,6 +42,27 @@ typedef struct args_t
   bool run_frames;
   uint32_t run_frames_count;
 } args_t;
+
+typedef struct
+{
+  vec4 position;
+  vec4 color;
+} vertex_t;
+
+vertex_t vertices[3] = {
+    [0] = {
+        .position = { 0.0f, -1.0f, 0.0f, 1.0f },
+        .color = { 0.0f, 1.0f, 1.0f, 1.0f },
+    },
+    [1] = {
+        .position = { -1.0f, 1.0f, 0.0f, 1.0f },
+        .color = { 1.0f, 0.0f, 1.0f, 1.0f },
+    },
+    [2] = {
+        .position = { 1.0f, 1.0f, 0.0f, 1.0f },
+        .color = { 1.0f, 1.0f, 0.0f, 1.0f },
+    },
+};
 
 void
 clean_up();
@@ -60,6 +87,8 @@ struct app_t {
   scegfx_image_t** swapchain_image;
   scegfx_image_view_t** swapchain_image_view;
   scegfx_framebuffer_t** framebuffer;
+  scegfx_buffer_t* vertex_buffer;
+  scegfx_device_memory_t* vertex_buffer_memory;
   scegfx_command_buffer_t** cmd;
   scegfx_render_pass_t* render_pass;
   scegfx_pipeline_layout_t* pipeline_layout;
@@ -372,6 +401,8 @@ encode_commands()
     }
     app.cmd[i]->api_vtable->bind_pipeline(
       app.cmd[i], scegfx_pipeline_type_graphics, app.pipeline);
+    app.cmd[i]->api_vtable->bind_vertex_buffer(
+      app.cmd[i], app.vertex_buffer, 0);
     app.cmd[i]->api_vtable->draw(app.cmd[i], 3, 1, 0, 0);
     app.cmd[i]->api_vtable->end_render_pass(app.cmd[i]);
     app.cmd[i]->api_vtable->end(app.cmd[i]);
@@ -442,6 +473,18 @@ init_pipeline()
   app.pipeline_layout->api_vtable->initialize(app.pipeline_layout);
   app.pipeline = app.context->api_vtable->create_pipeline(app.context, NULL);
   {
+    scegfx_vertex_input_attribute_description_t attrs[2] = {
+        [0] = {
+            .location = V_POSITION_LOCATION,
+            .format = scegfx_format_r32g32b32a32_sfloat,
+            .offset = offsetof(vertex_t, position),
+        },
+        [1] = {
+            .location = V_COLOR_LOCATION,
+            .format = scegfx_format_r32g32b32a32_sfloat,
+            .offset = offsetof(vertex_t, color),
+        },
+    };
     scegfx_pipeline_create_info_t info = {
         .type = scegfx_pipeline_type_graphics,
         .layout = app.pipeline_layout,
@@ -456,6 +499,13 @@ init_pipeline()
                 .line_width = 1.0f,
             },
             .render_pass = app.render_pass,
+            .vertex_input_state = {
+                .binding_description = {
+                    .stride = sizeof(vertex_t),
+                },
+                .attribute_description_count = countof(attrs),
+                .attribute_descriptions = attrs,
+            },
         },
     };
     app.pipeline->api_vtable->initialize(app.pipeline, &info);
@@ -469,6 +519,52 @@ init_pipeline()
     app.context, frag_module, NULL);
 
   return true;
+}
+
+void
+init_geometry_buffer(scegfx_device_size_t buffer_size,
+                     scegfx_buffer_usage_t usage,
+                     void* data,
+                     scegfx_buffer_t** out_buffer,
+                     scegfx_device_memory_t** out_buffer_memory)
+{
+  scegfx_buffer_t* buffer =
+    app.context->api_vtable->create_buffer(app.context, NULL);
+  buffer->api_vtable->initialize(buffer, buffer_size, usage);
+  scegfx_device_memory_requirements_t memory_requirements = {};
+  app.context->api_vtable->get_buffer_memory_requirements(
+    app.context, buffer, &memory_requirements);
+  uint32_t memory_type_index = app.context->api_vtable->get_memory_type(
+    app.context,
+    memory_requirements.memory_type_bits,
+    scegfx_memory_properties_host_visible |
+      scegfx_memory_properties_host_coherent);
+  scegfx_device_memory_allocate_info_t info = {
+    .allocation_size = memory_requirements.size,
+    .memory_type_index = memory_type_index,
+  };
+  scegfx_device_memory_t* buffer_memory =
+    app.context->api_vtable->allocate_memory(app.context, &info, NULL);
+  app.context->api_vtable->bind_buffer_memory(
+    app.context, buffer, buffer_memory, 0);
+  void* mapped = NULL;
+  app.context->api_vtable->map_memory(
+    app.context, buffer_memory, 0, buffer_size, &mapped);
+  memcpy(mapped, data, buffer_size);
+  app.context->api_vtable->unmap_memory(app.context, buffer_memory);
+
+  *out_buffer = buffer;
+  *out_buffer_memory = buffer_memory;
+}
+
+void
+init_geometry()
+{
+  init_geometry_buffer(sizeof(vertices),
+                       scegfx_buffer_usage_vertex_buffer,
+                       vertices,
+                       &app.vertex_buffer,
+                       &app.vertex_buffer_memory);
 }
 
 void
@@ -572,6 +668,10 @@ clean_up()
   }
   app.render_pass->api_vtable->terminate(app.render_pass);
 
+  app.context->api_vtable->free_memory(
+    app.context, app.vertex_buffer_memory, NULL);
+  app.vertex_buffer->api_vtable->terminate(app.vertex_buffer);
+
   app.swapchain->api_vtable->terminate(app.swapchain);
 
   app.context->api_vtable->destroy_fence(app.context, app.acquire_fence, NULL);
@@ -593,6 +693,8 @@ clean_up()
   }
   app.context->api_vtable->destroy_render_pass(
     app.context, app.render_pass, NULL);
+
+  app.context->api_vtable->destroy_buffer(app.context, app.vertex_buffer, NULL);
 
   app.context->api_vtable->destroy_swapchain(app.context, app.swapchain, NULL);
 
@@ -629,6 +731,7 @@ main(int argc, char* argv[])
   if (!init_pipeline()) {
     return 1;
   }
+  init_geometry();
   encode_commands();
 
   run_app();
