@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include <SDL_opengl.h>
+
 #include "commands_opengl.h"
 #include "context_opengl.h"
 #include "framebuffer_opengl.h"
@@ -29,6 +31,10 @@ void
 scegfx_command_buffer_opengl_terminate(scegfx_command_buffer_t* super)
 {
   assert(super->initialized);
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  glDeleteBuffers(this->vao_count, this->vaos);
+  memset(&this->vao_map, 0, sizeof(this->vao_map));
+  this->vao_count = 0;
   super->initialized = false;
 }
 
@@ -183,6 +189,9 @@ scegfx_command_buffer_opengl_bind_pipeline(scegfx_command_buffer_t* super,
   this->commands[this->count] = scegfx_command_opengl_bind_pipeline;
   this->args[this->count].bind_pipeline.type = pipeline_opengl->type;
   this->args[this->count].bind_pipeline.program = pipeline_opengl->program;
+  if (pipeline_opengl->type == scegfx_pipeline_type_graphics) {
+    this->draw_mode = pipeline_opengl->graphics.topology;
+  }
 
   if (pipeline_opengl->type == scegfx_pipeline_type_graphics) {
     this->args[this->count].bind_pipeline.graphics.front_face =
@@ -192,6 +201,162 @@ scegfx_command_buffer_opengl_bind_pipeline(scegfx_command_buffer_t* super,
     this->args[this->count].bind_pipeline.graphics.line_width =
       pipeline_opengl->graphics.line_width;
   }
+
+  ++this->count;
+}
+
+void
+scegfx_command_buffer_opengl_resolve_vao(scegfx_command_buffer_opengl_t* this)
+{
+  bool create = true;
+  uint32_t vao = 0;
+  {
+    uint8_t out_vao = 0;
+    bool found = scegfx_vao_map_get(&this->vao_map, &this->vao_desc, &out_vao);
+    vao = out_vao;
+    if (found) {
+      create = false;
+    }
+  }
+  if (create) {
+    glGenVertexArrays(1, &vao);
+    this->vaos[this->vao_count++] = vao;
+    glBindVertexArray(vao);
+
+    if (this->vao_desc.index.handle) {
+      scegfx_device_size_t stride = 0;
+      switch (this->index_type) {
+        case scegfx_index_type_u16:
+          stride = sizeof(uint16_t);
+          break;
+        case scegfx_index_type_u32:
+          stride = sizeof(uint32_t);
+          break;
+        default:
+          assert(false);
+          break;
+      }
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vao_desc.index.handle);
+      //    glBindBufferRange(GL_ELEMENT_ARRAY_BUFFER,
+      //                      0,
+      //                      this->vao_desc.index.handle,
+      //                      (intptr_t)this->vao_desc.index.offset,
+      //                      stride);
+    }
+
+#if defined(EMSCRIPTEN)
+    glBindBuffer(GL_ARRAY_BUFFER, this->vao_desc.vertex.handle);
+    //  glBindBufferRange(GL_ARRAY_BUFFER,
+    //                    0,
+    //                    this->vao_desc.vertex.handle,
+    //                    (intptr_t)this->vao_desc.vertex.offset,
+    //                    this->vao_desc.vertex.stride);
+#else
+    glBindVertexBuffer(0,
+                       this->vao_desc.vertex.handle,
+                       (intptr_t)this->vao_desc.vertex.offset,
+                       this->vao_desc.vertex.stride);
+#endif // defined(EMSCRIPTEN)
+
+    assert(this->vao_desc.attribute_count <=
+           sizeof(this->vao_desc.attributes) /
+             sizeof(this->vao_desc.attributes[0]));
+    for (uint32_t i = 0; i < this->vao_desc.attribute_count; ++i) {
+      glEnableVertexAttribArray(this->vao_desc.attributes[i].location);
+#if defined(EMSCRIPTEN)
+      glVertexAttribPointer(
+        this->vao_desc.attributes[i].location,
+        this->vao_desc.attributes[i].size,
+        this->vao_desc.attributes[i].format,
+        this->vao_desc.attributes[i].normalized,
+        this->vao_desc.vertex.stride,
+        (void*)(uintptr_t)this->vao_desc.attributes[i].offset);
+      assert(this->vao_desc.attributes[i].binding == 0);
+#else
+      glVertexAttribFormat(this->vao_desc.attributes[i].location,
+                           this->vao_desc.attributes[i].size,
+                           this->vao_desc.attributes[i].format,
+                           this->vao_desc.attributes[i].normalized,
+                           this->vao_desc.attributes[i].offset);
+      glVertexAttribBinding(this->vao_desc.attributes[i].location,
+                            this->vao_desc.attributes[i].binding);
+#endif // defined(EMSCRIPTEN)
+    }
+
+    glBindVertexArray(0);
+    scegfx_vao_map_add(&this->vao_map, &this->vao_desc, vao);
+  }
+
+  assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+  this->commands[this->count] = scegfx_command_opengl_bind_vao;
+  this->args[this->count].bind_vao.vertex_array_object = vao;
+  ++this->count;
+}
+
+void
+scegfx_command_buffer_opengl_draw(scegfx_command_buffer_t* super,
+                                  uint32_t vertex_count,
+                                  uint32_t instance_count,
+                                  uint32_t first_vertex,
+                                  uint32_t first_instance)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+
+  scegfx_command_buffer_opengl_resolve_vao(this);
+
+  assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+
+  this->commands[this->count] = scegfx_command_opengl_draw;
+  this->args[this->count].draw.mode = this->draw_mode;
+  this->args[this->count].draw.vertex_count = vertex_count;
+  this->args[this->count].draw.instance_count = instance_count;
+  this->args[this->count].draw.first_vertex = first_vertex;
+  this->args[this->count].draw.first_instance = first_instance;
+  ++this->count;
+}
+
+void
+scegfx_command_buffer_opengl_draw_indexed(scegfx_command_buffer_t* super,
+                                          uint32_t index_count,
+                                          uint32_t instance_count,
+                                          uint32_t first_index,
+                                          int32_t vertex_offset,
+                                          uint32_t first_instance)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  scegfx_context_opengl_t* context = (scegfx_context_opengl_t*)super->context;
+
+  scegfx_command_buffer_opengl_resolve_vao(this);
+
+  assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+
+  uint32_t index_type = 0x1405 /*GL_UNSIGNED_INT*/;
+  switch (this->index_type) {
+    case scegfx_index_type_u16:
+      index_type = 0x1403 /*GL_UNSIGNED_SHORT*/;
+      break;
+    case scegfx_index_type_u32:
+      index_type = 0x1405 /*GL_UNSIGNED_INT*/;
+      break;
+    default:
+      context->super.debug_callback(
+        scegfx_debug_severity_error,
+        __LINE__,
+        FILE_BASENAME,
+        "Unable to encode command: invalid index type");
+      return;
+  }
+
+  this->commands[this->count] = scegfx_command_opengl_draw_indexed;
+  this->args[this->count].draw_indexed.mode = this->draw_mode;
+  this->args[this->count].draw_indexed.index_type = index_type;
+  this->args[this->count].draw_indexed.index_count = index_count;
+  this->args[this->count].draw_indexed.instance_count = instance_count;
+  this->args[this->count].draw_indexed.first_index = first_index;
+  this->args[this->count].draw_indexed.vertex_offset = vertex_offset;
+  this->args[this->count].draw_indexed.first_instance = first_instance;
 
   ++this->count;
 }

@@ -372,6 +372,7 @@ encode_commands()
     }
     app.cmd[i]->api_vtable->bind_pipeline(
       app.cmd[i], scegfx_pipeline_type_graphics, app.pipeline);
+    app.cmd[i]->api_vtable->draw(app.cmd[i], 3, 1, 0, 0);
     app.cmd[i]->api_vtable->end_render_pass(app.cmd[i]);
     app.cmd[i]->api_vtable->end(app.cmd[i]);
   }

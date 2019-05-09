@@ -50,6 +50,18 @@ typedef struct scegfx_command_buffer_api_vtable_t
                         scegfx_pipeline_type_t type,
                         const scegfx_pipeline_t* pipeline);
 
+  void (*draw)(scegfx_command_buffer_t* this,
+               uint32_t vertex_count,
+               uint32_t instance_count,
+               uint32_t first_vertex,
+               uint32_t first_instance);
+  void (*draw_indexed)(scegfx_command_buffer_t* this,
+                       uint32_t index_count,
+                       uint32_t instance_count,
+                       uint32_t first_index,
+                       int32_t vertex_offset,
+                       uint32_t first_instance);
+
   void (*debug_marker_begin)(scegfx_command_buffer_t* this,
                              const scegfx_debug_marker_info_t* info);
   void (*debug_marker_end)(scegfx_command_buffer_t* this);

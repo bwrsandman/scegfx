@@ -32,6 +32,7 @@ scegfx_command_begin_render_pass_opengl(const scegfx_command_arg_t* arg)
 void
 scegfx_command_end_render_pass_opengl(const scegfx_command_arg_t* arg)
 {
+  glBindVertexArray(0);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -50,6 +51,32 @@ scegfx_command_opengl_bind_pipeline(const scegfx_command_arg_t* arg)
   }
   assert(glIsProgram(arg->bind_pipeline.program));
   glUseProgram(arg->bind_pipeline.program);
+}
+
+void
+scegfx_command_opengl_bind_vao(const scegfx_command_arg_t* arg)
+{
+  assert(glIsVertexArray(arg->bind_vao.vertex_array_object));
+  glBindVertexArray(arg->bind_vao.vertex_array_object);
+}
+
+void
+scegfx_command_opengl_draw(const scegfx_command_arg_t* arg)
+{
+  glDrawArraysInstanced(arg->draw.mode,
+                        arg->draw.first_vertex,
+                        arg->draw.vertex_count,
+                        arg->draw.instance_count);
+}
+
+void
+scegfx_command_opengl_draw_indexed(const scegfx_command_arg_t* arg)
+{
+  glDrawElementsInstanced(arg->draw_indexed.mode,
+                          arg->draw_indexed.index_count,
+                          arg->draw_indexed.index_type,
+                          (const void*)arg->draw_indexed.first_index,
+                          arg->draw_indexed.index_count);
 }
 
 void

@@ -162,6 +162,37 @@ scegfx_command_buffer_vulkan_bind_pipeline(scegfx_command_buffer_t* super,
 }
 
 void
+scegfx_command_buffer_vulkan_draw(scegfx_command_buffer_t* super,
+                                  uint32_t vertex_count,
+                                  uint32_t instance_count,
+                                  uint32_t first_vertex,
+                                  uint32_t first_instance)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_vulkan_t* this = (scegfx_command_buffer_vulkan_t*)super;
+  vkCmdDraw(
+    this->handle, vertex_count, instance_count, first_vertex, first_instance);
+}
+
+void
+scegfx_command_buffer_vulkan_draw_indexed(scegfx_command_buffer_t* super,
+                                          uint32_t index_count,
+                                          uint32_t instance_count,
+                                          uint32_t first_index,
+                                          int32_t vertex_offset,
+                                          uint32_t first_instance)
+{
+  assert(super->initialized);
+  scegfx_command_buffer_vulkan_t* this = (scegfx_command_buffer_vulkan_t*)super;
+  vkCmdDrawIndexed(this->handle,
+                   index_count,
+                   instance_count,
+                   first_index,
+                   vertex_offset,
+                   first_instance);
+}
+
+void
 scegfx_command_buffer_vulkan_debug_marker_begin(
   scegfx_command_buffer_t* super,
   const scegfx_debug_marker_info_t* info)

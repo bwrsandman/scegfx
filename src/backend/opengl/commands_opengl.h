@@ -24,6 +24,28 @@ typedef union scegfx_command_arg_t
       } graphics;
     };
   } bind_pipeline;
+  struct
+  {
+    uint32_t vertex_array_object;
+  } bind_vao;
+  struct
+  {
+    uint32_t mode;
+    uint32_t vertex_count;
+    uint32_t instance_count;
+    uint64_t first_vertex;
+    uint32_t first_instance;
+  } draw;
+  struct
+  {
+    uint32_t mode;
+    uint32_t index_count;
+    uint32_t index_type;
+    uint32_t instance_count;
+    uint64_t first_index;
+    int32_t vertex_offset;
+    uint32_t first_instance;
+  } draw_indexed;
   scegfx_debug_marker_info_t debug_maker_info;
 } scegfx_command_arg_t;
 
@@ -35,6 +57,12 @@ void
 scegfx_command_end_render_pass_opengl(const scegfx_command_arg_t* arg);
 void
 scegfx_command_opengl_bind_pipeline(const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_bind_vao(const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_draw(const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_draw_indexed(const scegfx_command_arg_t* arg);
 void
 scegfx_command_opengl_debug_marker_begin(const scegfx_command_arg_t* arg);
 void

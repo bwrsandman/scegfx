@@ -22,6 +22,12 @@ typedef enum scegfx_format_t
   scegfx_format_d32_unorm_s8_uint = 130,
 } scegfx_format_t;
 
+typedef enum scegfx_index_type_t
+{
+  scegfx_index_type_u16,
+  scegfx_index_type_u32,
+} scegfx_index_type_t;
+
 typedef enum scegfx_memory_properties_t
 {
   scegfx_memory_properties_device_local = 0x0001u,
