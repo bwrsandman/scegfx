@@ -52,6 +52,19 @@ scegfx_pipeline_opengl_initialize(scegfx_pipeline_t* super,
       glAttachShader(program, fragment_shader->handle);
     }
     this->graphics.topology = GL_TRIANGLES;
+    this->graphics.binding_desc =
+      info->graphics.vertex_input_state.binding_description;
+    assert(info->graphics.vertex_input_state.attribute_description_count <=
+           SCEGFX_OPENGL_MAX_VERTEX_ATTRIBUTE_COUNT);
+    for (uint32_t i = 0;
+         i < info->graphics.vertex_input_state.attribute_description_count;
+         ++i) {
+      this->graphics.attribute_descs[i] =
+        info->graphics.vertex_input_state.attribute_descriptions[i];
+    }
+    this->graphics.attribute_desc_count =
+      info->graphics.vertex_input_state.attribute_description_count;
+
     switch (info->graphics.raster_state.cull_mode) {
       case scegfx_raster_state_cull_mode_none:
         this->graphics.cull_face = 0;

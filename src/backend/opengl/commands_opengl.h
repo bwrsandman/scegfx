@@ -7,6 +7,8 @@
 
 #include <scegfx/command_buffer.h>
 
+#include "pipeline_opengl.h"
+
 typedef union scegfx_command_arg_t
 {
   scegfx_render_pass_begin_info_t render_pass_begin_info;

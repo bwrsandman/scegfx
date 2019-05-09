@@ -191,6 +191,45 @@ scegfx_command_buffer_opengl_bind_pipeline(scegfx_command_buffer_t* super,
   this->args[this->count].bind_pipeline.program = pipeline_opengl->program;
   if (pipeline_opengl->type == scegfx_pipeline_type_graphics) {
     this->draw_mode = pipeline_opengl->graphics.topology;
+    assert(pipeline_opengl->graphics.attribute_desc_count <=
+           sizeof(this->vao_desc.attributes) /
+             sizeof(this->vao_desc.attributes[0]));
+    for (uint32_t i = 0; i < pipeline_opengl->graphics.attribute_desc_count;
+         ++i) {
+      uint32_t size = 0;
+      uint32_t format = 0;
+      bool normalized = false;
+      switch (pipeline_opengl->graphics.attribute_descs[i].format) {
+        case scegfx_format_r32g32_sfloat:
+          size = 2;
+          format = 0x1406 /*GL_FLOAT*/;
+          normalized = false;
+          break;
+        case scegfx_format_r32g32b32_sfloat:
+          size = 3;
+          format = 0x1406 /*GL_FLOAT*/;
+          normalized = false;
+          break;
+        case scegfx_format_r32g32b32a32_sfloat:
+          size = 4;
+          format = 0x1406 /*GL_FLOAT*/;
+          normalized = false;
+          break;
+        default:
+          assert(false);
+      }
+      this->vao_desc.attributes[i].location =
+        pipeline_opengl->graphics.attribute_descs[i].location;
+      this->vao_desc.attributes[i].size = size;
+      this->vao_desc.attributes[i].format = format;
+      this->vao_desc.attributes[i].normalized = normalized;
+      this->vao_desc.attributes[i].offset =
+        pipeline_opengl->graphics.attribute_descs[i].offset;
+    }
+    this->vao_desc.attribute_count =
+      pipeline_opengl->graphics.attribute_desc_count;
+    this->vao_desc.vertex.stride =
+      pipeline_opengl->graphics.binding_desc.stride;
   }
 
   if (pipeline_opengl->type == scegfx_pipeline_type_graphics) {

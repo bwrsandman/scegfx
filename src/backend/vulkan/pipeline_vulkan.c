@@ -84,6 +84,34 @@ scegfx_pipeline_vulkan_initialize(scegfx_pipeline_t* super,
     VkPipelineVertexInputStateCreateInfo vertex_input_state = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
     };
+    const VkVertexInputBindingDescription binding = {
+      .binding = 0,
+      .stride = info->graphics.vertex_input_state.binding_description.stride,
+      .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+    };
+    assert(info->graphics.vertex_input_state.attribute_description_count <=
+           SCEGFX_VULKAN_MAX_VERTEX_ATTRIBUTE_COUNT);
+    VkVertexInputAttributeDescription
+      attributes[SCEGFX_VULKAN_MAX_VERTEX_ATTRIBUTE_COUNT];
+    for (uint32_t i = 0;
+         i < info->graphics.vertex_input_state.attribute_description_count;
+         ++i) {
+      attributes[i].location =
+        info->graphics.vertex_input_state.attribute_descriptions[i].location;
+      attributes[i].binding = 0;
+      attributes[i].format =
+        (VkFormat)info->graphics.vertex_input_state.attribute_descriptions[i]
+          .format;
+      attributes[i].offset =
+        info->graphics.vertex_input_state.attribute_descriptions[i].offset;
+    }
+    if (info->graphics.vertex_input_state.attribute_description_count) {
+      vertex_input_state.vertexBindingDescriptionCount = 1;
+      vertex_input_state.pVertexBindingDescriptions = &binding;
+      vertex_input_state.vertexAttributeDescriptionCount =
+        info->graphics.vertex_input_state.attribute_description_count;
+      vertex_input_state.pVertexAttributeDescriptions = attributes;
+    }
     VkPipelineInputAssemblyStateCreateInfo input_assembly = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
       .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,

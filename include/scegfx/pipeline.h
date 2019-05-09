@@ -38,6 +38,18 @@ typedef enum scegfx_raster_state_front_face_t
   scegfx_raster_state_front_face_clockwise = 1,
 } scegfx_raster_state_front_face_t;
 
+typedef struct scegfx_vertex_input_binding_description_t
+{
+  uint32_t stride;
+} scegfx_vertex_input_binding_description_t;
+
+typedef struct scegfx_vertex_input_attribute_description_t
+{
+  uint32_t location;
+  scegfx_format_t format;
+  uint32_t offset;
+} scegfx_vertex_input_attribute_description_t;
+
 typedef struct scegfx_pipeline_create_info_t
 {
   scegfx_pipeline_type_t type;
@@ -65,6 +77,13 @@ typedef struct scegfx_pipeline_create_info_t
         float line_width;
       } raster_state;
       const scegfx_render_pass_t* render_pass;
+      struct
+      {
+        scegfx_vertex_input_binding_description_t binding_description;
+        uint32_t attribute_description_count;
+        const scegfx_vertex_input_attribute_description_t*
+          attribute_descriptions;
+      } vertex_input_state;
     } graphics;
     struct
     {

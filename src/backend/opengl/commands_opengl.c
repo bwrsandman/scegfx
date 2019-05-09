@@ -4,11 +4,14 @@
 
 #include "commands_opengl.h"
 
+#include <assert.h>
+
 #include <SDL_opengl.h>
 #include <assert.h>
 
 #include "command_buffer_opengl.h"
 #include "framebuffer_opengl.h"
+#include "pipeline_opengl.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"

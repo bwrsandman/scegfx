@@ -9,6 +9,11 @@
 
 #include <vulkan/vulkan.h>
 
+enum
+{
+  SCEGFX_VULKAN_MAX_VERTEX_ATTRIBUTE_COUNT = 2,
+};
+
 typedef struct scegfx_pipeline_vulkan_t
 {
   scegfx_pipeline_t super;
