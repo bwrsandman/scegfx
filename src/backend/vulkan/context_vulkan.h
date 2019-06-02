@@ -9,6 +9,8 @@
 
 #include <vulkan/vulkan.h>
 
+typedef struct sce_private_window_t sce_private_window_t;
+
 enum
 {
   SCEGFX_VULKAN_MAX_EXTENSION_STRING_SIZE = 32,
@@ -16,6 +18,8 @@ enum
   SCEGFX_VULKAN_MAX_LAYER_STRING_SIZE = 64,
   SCEGFX_VULKAN_MAX_LAYER_COUNT = 64,
   SCEGFX_VULKAN_MAX_SURFACE_PRESENT_MODES_COUNT = 32,
+  SCEGFX_VULKAN_MAX_DESCRIPTOR_SET_WRITES = 32,
+  SCEGFX_VULKAN_MAX_DESCRIPTOR_COUNT = 32,
 };
 
 typedef struct scegfx_context_vulkan_t
@@ -199,6 +203,22 @@ scegfx_context_vulkan_destroy_command_buffer(scegfx_context_t* super,
                                              scegfx_command_buffer_t* queue,
                                              scegfx_allocator_t* allocator);
 
+scegfx_descriptor_set_layout_t*
+scegfx_context_vulkan_create_descriptor_set_layout(
+  scegfx_context_t* this,
+  scegfx_allocator_t* allocator);
+void
+scegfx_context_vulkan_destroy_descriptor_set_layout(
+  scegfx_context_t* this,
+  scegfx_descriptor_set_layout_t* layout,
+  scegfx_allocator_t* allocator);
+
+void
+scegfx_context_vulkan_update_descriptor_sets(
+  scegfx_context_t* this,
+  uint32_t write_count,
+  const scegfx_write_descriptor_set_t* writes);
+
 scegfx_pipeline_layout_t*
 scegfx_context_vulkan_create_pipeline_layout(scegfx_context_t* this,
                                              scegfx_allocator_t* allocator);
@@ -265,6 +285,11 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_vulkan = {
   .destroy_command_buffer = scegfx_context_vulkan_destroy_command_buffer,
   .create_shader_module = scegfx_context_vulkan_create_shader_module,
   .destroy_shader_module = scegfx_context_vulkan_destroy_shader_module,
+  .create_descriptor_set_layout =
+    scegfx_context_vulkan_create_descriptor_set_layout,
+  .destroy_descriptor_set_layout =
+    scegfx_context_vulkan_destroy_descriptor_set_layout,
+  .update_descriptor_sets = scegfx_context_vulkan_update_descriptor_sets,
   .create_pipeline_layout = scegfx_context_vulkan_create_pipeline_layout,
   .destroy_pipeline_layout = scegfx_context_vulkan_destroy_pipeline_layout,
   .create_pipeline = scegfx_context_vulkan_create_pipeline,

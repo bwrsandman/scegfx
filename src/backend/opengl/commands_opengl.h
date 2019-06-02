@@ -32,6 +32,24 @@ typedef union scegfx_command_arg_t
   } bind_vao;
   struct
   {
+    uint32_t texture_unit;
+    uint32_t target;
+    uint32_t texture;
+    int32_t mag_filter;
+    int32_t min_filter;
+    int32_t texture_wrap_s;
+    int32_t texture_wrap_t;
+    int32_t texture_wrap_r;
+  } bind_descriptor_set_sampled_image;
+  struct
+  {
+    uint32_t index;
+    uint32_t buffer;
+    intptr_t offset;
+    intptr_t size;
+  } bind_descriptor_set_uniform_buffer;
+  struct
+  {
     uint32_t mode;
     uint32_t vertex_count;
     uint32_t instance_count;
@@ -90,6 +108,12 @@ void
 scegfx_command_opengl_bind_pipeline(const scegfx_command_arg_t* arg);
 void
 scegfx_command_opengl_bind_vao(const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_bind_descriptor_set_sampled_image(
+  const scegfx_command_arg_t* arg);
+void
+scegfx_command_opengl_bind_descriptor_set_uniform_buffer(
+  const scegfx_command_arg_t* arg);
 void
 scegfx_command_opengl_draw(const scegfx_command_arg_t* arg);
 void

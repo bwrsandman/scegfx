@@ -12,6 +12,8 @@
 
 #include "buffer_opengl.h"
 #include "command_buffer_opengl.h"
+#include "descriptor_set_layout_opengl.h"
+#include "descriptor_set_opengl.h"
 #include "device_memory_opengl.h"
 #include "fence_opengl.h"
 #include "framebuffer_opengl.h"
@@ -831,6 +833,102 @@ scegfx_context_opengl_destroy_framebuffer(scegfx_context_t* this,
     free(framebuffer);
   } else {
     allocator->allocator_callback(framebuffer, 0, allocator->user_data);
+  }
+}
+
+scegfx_descriptor_set_layout_t*
+scegfx_context_opengl_create_descriptor_set_layout(
+  scegfx_context_t* super,
+  scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_descriptor_set_layout_t* layout = NULL;
+  if (allocator == NULL)
+    layout = malloc(sizeof(scegfx_descriptor_set_layout_opengl_t));
+  else
+    layout = allocator->allocator_callback(
+      NULL,
+      sizeof(scegfx_descriptor_set_layout_opengl_t),
+      allocator->user_data);
+  memset(layout, 0, sizeof(scegfx_descriptor_set_layout_opengl_t));
+
+  layout->api_vtable = &scegfx_descriptor_set_layout_api_vtable_opengl;
+  layout->context = super;
+
+  return layout;
+}
+
+void
+scegfx_context_opengl_destroy_descriptor_set_layout(
+  scegfx_context_t* this,
+  scegfx_descriptor_set_layout_t* layout,
+  scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(layout);
+  } else {
+    allocator->allocator_callback(layout, 0, allocator->user_data);
+  }
+}
+
+void
+scegfx_context_opengl_update_descriptor_sets(
+  scegfx_context_t* super,
+  uint32_t write_count,
+  const scegfx_write_descriptor_set_t* writes)
+{
+  assert(super->initialized);
+  uint32_t k = 0;
+  for (uint32_t i = 0; i < write_count; ++i) {
+    scegfx_descriptor_set_opengl_t* dst_set =
+      (scegfx_descriptor_set_opengl_t*)writes[i].dst_set;
+
+    if (writes[i].descriptor_count > dst_set->descriptor_count) {
+      super->debug_callback(
+        scegfx_debug_severity_error,
+        __LINE__,
+        FILE_BASENAME,
+        "Write descriptor count exceeds dst_set descriptor count");
+      return;
+    }
+
+    if (writes[i].image_info) {
+      for (uint32_t j = 0; j < writes[i].descriptor_count; ++j) {
+        scegfx_image_view_opengl_t* image_view =
+          (scegfx_image_view_opengl_t*)writes[i].image_info[j].image_view;
+        scegfx_sampler_opengl_t* sampler =
+          (scegfx_sampler_opengl_t*)writes[i].image_info[j].sampler;
+        dst_set->descriptors[k].type = scegfx_descriptor_type_sampled_image;
+        dst_set->descriptors[k].sampled_image.sampler.mag_filter =
+          sampler->mag_filter;
+        dst_set->descriptors[k].sampled_image.sampler.min_filter =
+          sampler->min_filter;
+        dst_set->descriptors[k].sampled_image.sampler.texture_wrap_s =
+          sampler->texture_wrap_s;
+        dst_set->descriptors[k].sampled_image.sampler.texture_wrap_t =
+          sampler->texture_wrap_t;
+        dst_set->descriptors[k].sampled_image.sampler.texture_wrap_r =
+          sampler->texture_wrap_r;
+        dst_set->descriptors[k].sampled_image.image.type =
+          image_view->image_type;
+        dst_set->descriptors[k].sampled_image.image.handle =
+          image_view->image_handle;
+        ++k;
+      }
+    }
+    if (writes[i].buffer_info) {
+      for (uint32_t j = 0; j < writes[i].descriptor_count; ++j) {
+        scegfx_buffer_opengl_t* buffer =
+          (scegfx_buffer_opengl_t*)writes[i].buffer_info[j].buffer;
+        assert(buffer->super.initialized);
+        dst_set->descriptors[k].type = scegfx_descriptor_type_uniform_buffer;
+        dst_set->descriptors[k].buffer.handle = buffer->handle;
+        dst_set->descriptors[k].buffer.offset = writes[i].buffer_info[j].offset;
+        dst_set->descriptors[k].buffer.range = writes[i].buffer_info[j].range;
+        ++k;
+      }
+    }
   }
 }
 

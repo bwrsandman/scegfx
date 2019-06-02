@@ -192,6 +192,22 @@ scegfx_context_opengl_destroy_shader_module(
   scegfx_shader_module_t* shader_module,
   scegfx_allocator_t* allocator);
 
+scegfx_descriptor_set_layout_t*
+scegfx_context_opengl_create_descriptor_set_layout(
+  scegfx_context_t* this,
+  scegfx_allocator_t* allocator);
+void
+scegfx_context_opengl_destroy_descriptor_set_layout(
+  scegfx_context_t* this,
+  scegfx_descriptor_set_layout_t* layout,
+  scegfx_allocator_t* allocator);
+
+void
+scegfx_context_opengl_update_descriptor_sets(
+  scegfx_context_t* this,
+  uint32_t write_count,
+  const scegfx_write_descriptor_set_t* writes);
+
 scegfx_pipeline_layout_t*
 scegfx_context_opengl_create_pipeline_layout(scegfx_context_t* this,
                                              scegfx_allocator_t* allocator);
@@ -258,6 +274,11 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_opengl = {
   .destroy_command_buffer = scegfx_context_opengl_destroy_command_buffer,
   .create_shader_module = scegfx_context_opengl_create_shader_module,
   .destroy_shader_module = scegfx_context_opengl_destroy_shader_module,
+  .create_descriptor_set_layout =
+    scegfx_context_opengl_create_descriptor_set_layout,
+  .destroy_descriptor_set_layout =
+    scegfx_context_opengl_destroy_descriptor_set_layout,
+  .update_descriptor_sets = scegfx_context_opengl_update_descriptor_sets,
   .create_pipeline_layout = scegfx_context_opengl_create_pipeline_layout,
   .destroy_pipeline_layout = scegfx_context_opengl_destroy_pipeline_layout,
   .create_pipeline = scegfx_context_opengl_create_pipeline,

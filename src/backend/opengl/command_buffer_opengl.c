@@ -14,6 +14,8 @@
 #include "buffer_opengl.h"
 #include "commands_opengl.h"
 #include "context_opengl.h"
+#include "descriptor_set_opengl.h"
+#include "device_memory_opengl.h"
 #include "framebuffer_opengl.h"
 #include "image_opengl.h"
 #include "pipeline_opengl.h"
@@ -247,6 +249,85 @@ scegfx_command_buffer_opengl_bind_pipeline(scegfx_command_buffer_t* super,
   }
 
   ++this->count;
+}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+void
+scegfx_command_buffer_opengl_bind_descriptor_set(
+  scegfx_command_buffer_t* super,
+  scegfx_pipeline_type_t bind_point,
+  const scegfx_pipeline_layout_t* layout,
+  const scegfx_descriptor_set_t* descriptor_set)
+#pragma clang diagnostic pop
+{
+  assert(super->initialized);
+  scegfx_command_buffer_opengl_t* this = (scegfx_command_buffer_opengl_t*)super;
+  const scegfx_descriptor_set_opengl_t* descriptor_set_gl =
+    (const scegfx_descriptor_set_opengl_t*)descriptor_set;
+
+  for (uint32_t i = 0; i < descriptor_set_gl->descriptor_count; ++i) {
+    assert(this->count + 1 < SCEGFX_MAX_COMMANDS);
+    const scegfx_descriptor_t* descriptor = &descriptor_set_gl->descriptors[i];
+
+    switch (descriptor->type) {
+      case scegfx_descriptor_type_sampled_image: {
+        this->commands[this->count] =
+          scegfx_command_opengl_bind_descriptor_set_sampled_image;
+        switch (descriptor->sampled_image.image.type) {
+          case scegfx_image_type_1d:
+            this->args[this->count].bind_descriptor_set_sampled_image.target =
+              GL_TEXTURE_1D;
+            break;
+          case scegfx_image_type_2d:
+            this->args[this->count].bind_descriptor_set_sampled_image.target =
+              GL_TEXTURE_2D;
+            break;
+          case scegfx_image_type_3d:
+            this->args[this->count].bind_descriptor_set_sampled_image.target =
+              GL_TEXTURE_3D;
+            break;
+          default:
+            assert(false);
+            break;
+        }
+        this->args[this->count].bind_descriptor_set_sampled_image.texture_unit =
+          GL_TEXTURE0 + descriptor->index;
+        this->args[this->count].bind_descriptor_set_sampled_image.texture =
+          descriptor->sampled_image.image.handle;
+        this->args[this->count].bind_descriptor_set_sampled_image.mag_filter =
+          descriptor->sampled_image.sampler.mag_filter;
+        this->args[this->count].bind_descriptor_set_sampled_image.min_filter =
+          descriptor->sampled_image.sampler.min_filter;
+        this->args[this->count]
+          .bind_descriptor_set_sampled_image.texture_wrap_s =
+          descriptor->sampled_image.sampler.texture_wrap_s;
+        this->args[this->count]
+          .bind_descriptor_set_sampled_image.texture_wrap_t =
+          descriptor->sampled_image.sampler.texture_wrap_t;
+        this->args[this->count]
+          .bind_descriptor_set_sampled_image.texture_wrap_r =
+          descriptor->sampled_image.sampler.texture_wrap_r;
+      } break;
+      case scegfx_descriptor_type_uniform_buffer: {
+        this->commands[this->count] =
+          scegfx_command_opengl_bind_descriptor_set_uniform_buffer;
+        this->args[this->count].bind_descriptor_set_uniform_buffer.index =
+          descriptor->index;
+        this->args[this->count].bind_descriptor_set_uniform_buffer.buffer =
+          descriptor->buffer.handle;
+        this->args[this->count].bind_descriptor_set_uniform_buffer.offset =
+          descriptor->buffer.offset;
+        this->args[this->count].bind_descriptor_set_uniform_buffer.size =
+          descriptor->buffer.range;
+      } break;
+      default:
+        assert(false);
+        break;
+    }
+
+    ++this->count;
+  }
 }
 
 void

@@ -5,11 +5,14 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <time.h>
+
 #include <SDL2/SDL.h>
 
 #include <scegfx/buffer.h>
 #include <scegfx/command_buffer.h>
 #include <scegfx/context.h>
+#include <scegfx/descriptor_set_layout.h>
 #include <scegfx/device_memory.h>
 #include <scegfx/fence.h>
 #include <scegfx/framebuffer.h>
@@ -49,19 +52,57 @@ typedef struct
   vec4 color;
 } vertex_t;
 
-vertex_t vertices[3] = {
+const float fov_y = 110.0f;
+const float near = 0.001f;
+const float far = 1000.0f;
+
+vertex_t vertices[8] = {
     [0] = {
-        .position = { 0.0f, -1.0f, 0.0f, 1.0f },
+        .position = { -1.0f, -1.0f, 1.0f, 1.0f },
         .color = { 0.0f, 1.0f, 1.0f, 1.0f },
     },
     [1] = {
-        .position = { -1.0f, 1.0f, 0.0f, 1.0f },
-        .color = { 1.0f, 0.0f, 1.0f, 1.0f },
+        .position = { -1.0f, 1.0f, 1.0f, 1.0f },
+        .color = { 1.0f, 1.0f, 1.0f, 1.0f },
     },
     [2] = {
-        .position = { 1.0f, 1.0f, 0.0f, 1.0f },
+        .position = { 1.0f, 1.0f, 1.0f, 1.0f },
         .color = { 1.0f, 1.0f, 0.0f, 1.0f },
     },
+    [3] = {
+        .position = { 1.0f, -1.0f, 1.0f, 1.0f },
+        .color = { 1.0f, 0.0f, 0.0f, 1.0f },
+    },
+    [4] = {
+        .position = { 1.0f, -1.0f, -1.0f, 1.0f },
+        .color = { 1.0f, 0.0f, 1.0f, 1.0f },
+    },
+    [5] = {
+        .position = { 1.0f, 1.0f, -1.0f, 1.0f },
+        .color = { 0.0f, 0.0f, 1.0f, 1.0f },
+    },
+    [6] = {
+        .position = { -1.0f, 1.0f, -1.0f, 1.0f },
+        .color = { 0.0f, 0.0f, 0.0f, 1.0f },
+    },
+    [7] = {
+        .position = { -1.0f, -1.0f, -1.0f, 1.0f },
+        .color = { 0.0f, 1.0f, 0.0f, 1.0f },
+    },
+};
+
+uint32_t indices[36] = {
+  0, 1, 2, 2, 3, 0,
+
+  4, 5, 6, 6, 7, 4,
+
+  6, 1, 0, 0, 7, 6,
+
+  2, 5, 4, 4, 3, 2,
+
+  5, 2, 1, 1, 6, 5,
+
+  7, 0, 3, 3, 4, 7,
 };
 
 void
@@ -89,6 +130,12 @@ struct app_t {
   scegfx_framebuffer_t** framebuffer;
   scegfx_buffer_t* vertex_buffer;
   scegfx_device_memory_t* vertex_buffer_memory;
+  scegfx_buffer_t* index_buffer;
+  scegfx_device_memory_t* index_buffer_memory;
+  struct uniform_t uniform;
+  scegfx_buffer_t** uniform_buffers;
+  scegfx_device_memory_t** uniform_buffers_memory;
+  scegfx_descriptor_set_t** descriptor_sets;
   scegfx_command_buffer_t** cmd;
   scegfx_render_pass_t* render_pass;
   scegfx_pipeline_layout_t* pipeline_layout;
@@ -403,7 +450,14 @@ encode_commands()
       app.cmd[i], scegfx_pipeline_type_graphics, app.pipeline);
     app.cmd[i]->api_vtable->bind_vertex_buffer(
       app.cmd[i], app.vertex_buffer, 0);
-    app.cmd[i]->api_vtable->draw(app.cmd[i], 3, 1, 0, 0);
+    app.cmd[i]->api_vtable->bind_index_buffer(
+      app.cmd[i], app.index_buffer, 0, scegfx_index_type_u32);
+    app.cmd[i]->api_vtable->bind_descriptor_set(app.cmd[i],
+                                                scegfx_pipeline_type_graphics,
+                                                app.pipeline_layout,
+                                                app.descriptor_sets[i]);
+    app.cmd[i]->api_vtable->draw_indexed(
+      app.cmd[i], countof(indices), 1, 0, 0, 0);
     app.cmd[i]->api_vtable->end_render_pass(app.cmd[i]);
     app.cmd[i]->api_vtable->end(app.cmd[i]);
   }
@@ -427,7 +481,6 @@ init_pipeline()
     fclose(file);
     scegfx_shader_module_create_info_t info = {
       .type = scegfx_stage_type_vertex,
-      .fix_vertex_y = true,
       .entry_point = "main",
       .size = size,
       .shader_src = shader_src,
@@ -470,7 +523,60 @@ init_pipeline()
 
   app.pipeline_layout =
     app.context->api_vtable->create_pipeline_layout(app.context, NULL);
-  app.pipeline_layout->api_vtable->initialize(app.pipeline_layout);
+  {
+    scegfx_descriptor_set_layout_t* set_layout =
+      app.context->api_vtable->create_descriptor_set_layout(app.context, NULL);
+    {
+      scegfx_descriptor_set_binding_t set_bindings[1] = {
+          [0] = {
+              .binding = V_UNIFORM_LOCATION,
+              .descriptor_type = scegfx_descriptor_type_uniform_buffer,
+              .descriptor_count = 1,
+              .stage = scegfx_stage_type_vertex,
+          },
+      };
+      scegfx_descriptor_set_layout_create_info_t info = {
+        .binding_count = countof(set_bindings),
+        .bindings = set_bindings,
+      };
+      set_layout->api_vtable->initialize(set_layout, &info);
+    }
+    {
+      scegfx_pipeline_layout_create_info_t info = {
+        .set_layout_count = 1,
+        .set_layouts = &set_layout,
+      };
+      app.pipeline_layout->api_vtable->initialize(app.pipeline_layout, &info);
+    }
+
+    app.descriptor_sets =
+      malloc(sizeof(scegfx_descriptor_set_t*) * app.swapchain->image_count);
+    for (uint32_t i = 0; i < app.swapchain->image_count; ++i) {
+      app.descriptor_sets[i] =
+        app.swapchain->api_vtable->allocate_descriptor_set(
+          app.swapchain, set_layout, NULL);
+      scegfx_descriptor_buffer_info_t buffer_info = {
+        .buffer = app.uniform_buffers[i],
+        .offset = 0,
+        .range = sizeof(struct uniform_t),
+      };
+      scegfx_write_descriptor_set_t descriptor_writes[1] = {
+          [0] = {
+              .dst_set = app.descriptor_sets[i],
+              .dst_binding = V_UNIFORM_LOCATION,
+              .descriptor_count = 1,
+              .descriptor_type = scegfx_descriptor_type_uniform_buffer,
+              .buffer_info = &buffer_info,
+          },
+      };
+      app.context->api_vtable->update_descriptor_sets(
+        app.context, countof(descriptor_writes), descriptor_writes);
+    }
+
+    set_layout->api_vtable->terminate(set_layout);
+    app.context->api_vtable->destroy_descriptor_set_layout(
+      app.context, set_layout, NULL);
+  }
   app.pipeline = app.context->api_vtable->create_pipeline(app.context, NULL);
   {
     scegfx_vertex_input_attribute_description_t attrs[2] = {
@@ -551,7 +657,7 @@ init_geometry_buffer(scegfx_device_size_t buffer_size,
   scegfx_buffer_t* staging_buffer =
     app.context->api_vtable->create_buffer(app.context, NULL);
   staging_buffer->api_vtable->initialize(
-    staging_buffer, buffer_size, scegfx_buffer_usage_transfer_src);
+    staging_buffer, buffer_size, usage | scegfx_buffer_usage_transfer_src);
 
   app.context->api_vtable->get_buffer_memory_requirements(
     app.context, staging_buffer, &memory_requirements);
@@ -620,6 +726,46 @@ init_geometry()
                        vertices,
                        &app.vertex_buffer,
                        &app.vertex_buffer_memory);
+  init_geometry_buffer(sizeof(indices),
+                       scegfx_buffer_usage_index_buffer,
+                       indices,
+                       &app.index_buffer,
+                       &app.index_buffer_memory);
+}
+
+void
+init_uniforms()
+{
+  app.uniform_buffers =
+    malloc(sizeof(scegfx_buffer_t*) * app.swapchain->image_count);
+  app.uniform_buffers_memory =
+    malloc(sizeof(scegfx_device_memory_t*) * app.swapchain->image_count);
+  for (uint32_t i = 0; i < app.swapchain->image_count; ++i) {
+    app.uniform_buffers[i] =
+      app.context->api_vtable->create_buffer(app.context, NULL);
+    app.uniform_buffers[i]->api_vtable->initialize(
+      app.uniform_buffers[i],
+      sizeof(struct uniform_t),
+      scegfx_buffer_usage_uniform_buffer);
+    scegfx_device_memory_requirements_t memory_requirements = {};
+    app.context->api_vtable->get_buffer_memory_requirements(
+      app.context, app.uniform_buffers[i], &memory_requirements);
+    {
+      uint32_t memory_type_index = app.context->api_vtable->get_memory_type(
+        app.context,
+        memory_requirements.memory_type_bits,
+        scegfx_memory_properties_host_visible |
+          scegfx_memory_properties_host_coherent);
+      scegfx_device_memory_allocate_info_t info = {
+        .allocation_size = memory_requirements.size,
+        .memory_type_index = memory_type_index,
+      };
+      app.uniform_buffers_memory[i] =
+        app.context->api_vtable->allocate_memory(app.context, &info, NULL);
+      app.context->api_vtable->bind_buffer_memory(
+        app.context, app.uniform_buffers[i], app.uniform_buffers_memory[i], 0);
+    }
+  }
 }
 
 void
@@ -656,6 +802,109 @@ handle_keyboard()
   }
 }
 
+float
+get_delta_t()
+{
+  static struct timespec last_time = {
+    .tv_sec = 0,
+  };
+  struct timespec now;
+  clock_gettime(CLOCK_REALTIME, &now);
+
+  float delta_t = now.tv_sec - last_time.tv_sec +
+                  0.000000001f * (now.tv_nsec - last_time.tv_nsec);
+  if (last_time.tv_sec == 0 && last_time.tv_nsec == 0) {
+    delta_t = 0;
+  }
+  last_time = now;
+
+  return delta_t;
+}
+
+void
+init_matrices()
+{
+  app.uniform.model[0] = 1.0f;
+  app.uniform.model[1] = 0.0f;
+  app.uniform.model[2] = 0.0f;
+  app.uniform.model[3] = 0.0f;
+  app.uniform.model[4] = 0.0f;
+  app.uniform.model[5] = 1.0f;
+  app.uniform.model[6] = 0.0f;
+  app.uniform.model[7] = 0.0f;
+  app.uniform.model[8] = 0.0f;
+  app.uniform.model[9] = 0.0f;
+  app.uniform.model[10] = 1.0f;
+  app.uniform.model[11] = 0.0f;
+  app.uniform.model[12] = 0.0f;
+  app.uniform.model[13] = 0.0f;
+  app.uniform.model[14] = 0.0f;
+  app.uniform.model[15] = 1.0f;
+
+  app.uniform.view[0] = 1.0f;
+  app.uniform.view[1] = 0.0f;
+  app.uniform.view[2] = 0.0f;
+  app.uniform.view[3] = 0.0f;
+  app.uniform.view[4] = 0.0f;
+  app.uniform.view[5] = 1.0f;
+  app.uniform.view[6] = 0.0f;
+  app.uniform.view[7] = 0.0f;
+  app.uniform.view[8] = 0.0f;
+  app.uniform.view[9] = 0.0f;
+  app.uniform.view[10] = 1.0f;
+  app.uniform.view[11] = 0.0f;
+  app.uniform.view[12] = 0.0f;
+  app.uniform.view[13] = 0.0f;
+  app.uniform.view[14] = -10.0f;
+  app.uniform.view[15] = 1.0f;
+
+  float half_tan = tanf(0.5f * fov_y * M_PI / 180.0f);
+  float aspect =
+    app.swapchain->extent.height / (float)app.swapchain->extent.width;
+  float z_range_inv = 1.0f / (far - near);
+
+  app.uniform.projection[0] = half_tan * aspect;
+  app.uniform.projection[1] = 0.0f;
+  app.uniform.projection[2] = 0.0f;
+  app.uniform.projection[3] = 0.0f;
+  app.uniform.projection[4] = 0.0f;
+  app.uniform.projection[5] = half_tan * (app.swapchain->flip_y ? -1.0f : 1.0f);
+  app.uniform.projection[6] = 0.0f;
+  app.uniform.projection[7] = 0.0f;
+  app.uniform.projection[8] = 0.0f;
+  app.uniform.projection[9] = 0.0f;
+  app.uniform.projection[10] = -(far + near) * z_range_inv;
+  app.uniform.projection[11] = -1.0f;
+  app.uniform.projection[12] = 0.0f;
+  app.uniform.projection[13] = 0.0f;
+  app.uniform.projection[14] = -2.0f * far * near * z_range_inv;
+  app.uniform.projection[15] = 0.0f;
+}
+
+void
+rotate_model(float theta)
+{
+  app.uniform.model[0] = cosf(theta);
+  app.uniform.model[1] = 0.0f;
+  app.uniform.model[2] = sinf(theta);
+  app.uniform.model[3] = 0.0f;
+
+  app.uniform.model[4] = 0.0f;
+  app.uniform.model[5] = 1.0f;
+  app.uniform.model[6] = 0.0f;
+  app.uniform.model[7] = 0.0f;
+
+  app.uniform.model[8] = -sinf(theta);
+  app.uniform.model[9] = 0.0f;
+  app.uniform.model[10] = cosf(theta);
+  app.uniform.model[11] = 0.0f;
+
+  app.uniform.model[12] = 0.0f;
+  app.uniform.model[13] = 5.0f * sinf(theta * 3.1f);
+  app.uniform.model[14] = 0.0f;
+  app.uniform.model[15] = 1.0f;
+}
+
 void
 run_loop()
 {
@@ -666,7 +915,23 @@ run_loop()
   }
 #endif
 
+  float delta_t = get_delta_t();
+
+  static float total_time_elapsed = 0.0f;
+  total_time_elapsed += delta_t;
+
   handle_keyboard();
+  rotate_model(total_time_elapsed);
+
+  {
+    scegfx_device_memory_t* uniform_memory =
+      app.uniform_buffers_memory[app.frame_count % app.swapchain->image_count];
+    void* mapped;
+    app.context->api_vtable->map_memory(
+      app.context, uniform_memory, 0, sizeof(app.uniform), &mapped);
+    memcpy(mapped, &app.uniform, sizeof(app.uniform));
+    app.context->api_vtable->unmap_memory(app.context, uniform_memory);
+  }
 
   uint32_t image_index = 0;
   app.acquire_fence->api_vtable->wait(app.acquire_fence, app.acquire_fence->max_wait_timeout);
@@ -716,6 +981,9 @@ clean_up()
   app.pipeline_layout->api_vtable->terminate(app.pipeline_layout);
   app.pipeline->api_vtable->terminate(app.pipeline);
   for (uint32_t i = 0; i < image_count; ++i) {
+    app.context->api_vtable->free_memory(
+      app.context, app.uniform_buffers_memory[i], NULL);
+    app.uniform_buffers[i]->api_vtable->terminate(app.uniform_buffers[i]);
     app.swapchain_image_view[i]->api_vtable->terminate(
       app.swapchain_image_view[i]);
     app.framebuffer[i]->api_vtable->terminate(app.framebuffer[i]);
@@ -726,6 +994,9 @@ clean_up()
   app.context->api_vtable->free_memory(
     app.context, app.vertex_buffer_memory, NULL);
   app.vertex_buffer->api_vtable->terminate(app.vertex_buffer);
+  app.context->api_vtable->free_memory(
+    app.context, app.index_buffer_memory, NULL);
+  app.index_buffer->api_vtable->terminate(app.index_buffer);
 
   app.swapchain->api_vtable->terminate(app.swapchain);
 
@@ -739,6 +1010,8 @@ clean_up()
     app.context, app.pipeline_layout, NULL);
   app.context->api_vtable->destroy_pipeline(app.context, app.pipeline, NULL);
   for (uint32_t i = 0; i < image_count; ++i) {
+    app.context->api_vtable->destroy_buffer(
+      app.context, app.uniform_buffers[i], NULL);
     app.context->api_vtable->destroy_image_view(
       app.context, app.swapchain_image_view[i], NULL);
     app.context->api_vtable->destroy_framebuffer(
@@ -750,6 +1023,7 @@ clean_up()
     app.context, app.render_pass, NULL);
 
   app.context->api_vtable->destroy_buffer(app.context, app.vertex_buffer, NULL);
+  app.context->api_vtable->destroy_buffer(app.context, app.index_buffer, NULL);
 
   app.context->api_vtable->destroy_swapchain(app.context, app.swapchain, NULL);
 
@@ -783,10 +1057,12 @@ main(int argc, char* argv[])
   init_synchronization_primitives();
   init_render_pass();
   init_framebuffer();
+  init_uniforms();
   if (!init_pipeline()) {
     return 1;
   }
   init_geometry();
+  init_matrices();
   encode_commands();
 
   run_app();

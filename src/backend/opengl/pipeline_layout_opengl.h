@@ -13,7 +13,9 @@ typedef struct scegfx_pipeline_layout_opengl_t
 } scegfx_pipeline_layout_opengl_t;
 
 bool
-scegfx_pipeline_layout_opengl_initialize(scegfx_pipeline_layout_t* this);
+scegfx_pipeline_layout_opengl_initialize(
+  scegfx_pipeline_layout_t* this,
+  const scegfx_pipeline_layout_create_info_t* info);
 void
 scegfx_pipeline_layout_opengl_terminate(scegfx_pipeline_layout_t* this);
 

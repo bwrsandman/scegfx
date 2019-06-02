@@ -9,8 +9,10 @@
 
 #include "buffer_vulkan.h"
 #include "context_vulkan.h"
+#include "descriptor_set_vulkan.h"
 #include "framebuffer_vulkan.h"
 #include "image_vulkan.h"
+#include "pipeline_layout_vulkan.h"
 #include "pipeline_vulkan.h"
 #include "render_pass_vulkan.h"
 
@@ -161,6 +163,48 @@ scegfx_command_buffer_vulkan_bind_pipeline(scegfx_command_buffer_t* super,
   }
 
   vkCmdBindPipeline(this->handle, bind_point, pipeline_vk->handle);
+}
+
+void
+scegfx_command_buffer_vulkan_bind_descriptor_set(
+  scegfx_command_buffer_t* super,
+  scegfx_pipeline_type_t type,
+  const scegfx_pipeline_layout_t* layout,
+  const scegfx_descriptor_set_t* descriptor_set)
+{
+  assert(super->initialized);
+
+  scegfx_command_buffer_vulkan_t* this = (scegfx_command_buffer_vulkan_t*)super;
+  const scegfx_pipeline_layout_vulkan_t* vk_layout =
+    (const scegfx_pipeline_layout_vulkan_t*)layout;
+  const scegfx_descriptor_set_vulkan_t* vk_descriptor_set =
+    (const scegfx_descriptor_set_vulkan_t*)descriptor_set;
+
+  VkPipelineBindPoint bind_point;
+
+  switch (type) {
+    case scegfx_pipeline_type_graphics:
+      bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+      break;
+    case scegfx_pipeline_type_compute:
+      bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+      break;
+    case scegfx_pipeline_type_ray_tracing:
+      bind_point = VK_PIPELINE_BIND_POINT_RAY_TRACING_NV;
+      break;
+    default:
+      assert(0);
+      return;
+  }
+
+  vkCmdBindDescriptorSets(this->handle,
+                          bind_point,
+                          vk_layout->handle,
+                          0,
+                          1,
+                          &vk_descriptor_set->handle,
+                          0,
+                          NULL);
 }
 
 void

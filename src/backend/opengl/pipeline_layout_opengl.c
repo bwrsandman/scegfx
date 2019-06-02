@@ -6,8 +6,12 @@
 
 #include <assert.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
 bool
-scegfx_pipeline_layout_opengl_initialize(scegfx_pipeline_layout_t* super)
+scegfx_pipeline_layout_opengl_initialize(
+  scegfx_pipeline_layout_t* super,
+  const scegfx_pipeline_layout_create_info_t* info)
 {
   assert(!super->initialized);
   scegfx_pipeline_layout_opengl_t* this =
@@ -16,6 +20,7 @@ scegfx_pipeline_layout_opengl_initialize(scegfx_pipeline_layout_t* super)
   this->super.initialized = true;
   return true;
 }
+#pragma clang diagnostic pop
 
 void
 scegfx_pipeline_layout_opengl_terminate(scegfx_pipeline_layout_t* super)

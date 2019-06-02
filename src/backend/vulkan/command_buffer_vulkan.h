@@ -42,6 +42,12 @@ void
 scegfx_command_buffer_vulkan_bind_pipeline(scegfx_command_buffer_t* this,
                                            scegfx_pipeline_type_t type,
                                            const scegfx_pipeline_t* pipeline);
+void
+scegfx_command_buffer_vulkan_bind_descriptor_set(
+  scegfx_command_buffer_t* this,
+  scegfx_pipeline_type_t bind_point,
+  const scegfx_pipeline_layout_t* layout,
+  const scegfx_descriptor_set_t* descriptor_set);
 
 void
 scegfx_command_buffer_vulkan_bind_vertex_buffer(scegfx_command_buffer_t* super,
@@ -126,6 +132,7 @@ const static scegfx_command_buffer_api_vtable_t
     .begin_render_pass = scegfx_command_buffer_vulkan_begin_render_pass,
     .end_render_pass = scegfx_command_buffer_vulkan_end_render_pass,
     .bind_pipeline = scegfx_command_buffer_vulkan_bind_pipeline,
+    .bind_descriptor_set = scegfx_command_buffer_vulkan_bind_descriptor_set,
     .bind_vertex_buffer = scegfx_command_buffer_vulkan_bind_vertex_buffer,
     .bind_index_buffer = scegfx_command_buffer_vulkan_bind_index_buffer,
     .draw = scegfx_command_buffer_vulkan_draw,

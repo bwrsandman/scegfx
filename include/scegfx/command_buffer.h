@@ -18,6 +18,7 @@ typedef struct scegfx_context_t scegfx_context_t;
 typedef struct scegfx_framebuffer_t scegfx_framebuffer_t;
 typedef struct scegfx_image_t scegfx_image_t;
 typedef struct scegfx_render_pass_t scegfx_render_pass_t;
+typedef struct scegfx_descriptor_set_t scegfx_descriptor_set_t;
 
 typedef enum scegfx_access_t
 {
@@ -175,6 +176,11 @@ typedef struct scegfx_command_buffer_api_vtable_t
   void (*bind_pipeline)(scegfx_command_buffer_t* this,
                         scegfx_pipeline_type_t type,
                         const scegfx_pipeline_t* pipeline);
+
+  void (*bind_descriptor_set)(scegfx_command_buffer_t* this,
+                              scegfx_pipeline_type_t bind_point,
+                              const scegfx_pipeline_layout_t* layout,
+                              const scegfx_descriptor_set_t* descriptor_set);
 
   void (*bind_vertex_buffer)(scegfx_command_buffer_t* this,
                              const scegfx_buffer_t* buffer,

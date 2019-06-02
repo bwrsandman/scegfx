@@ -60,6 +60,43 @@ scegfx_command_opengl_bind_pipeline(const scegfx_command_arg_t* arg)
 }
 
 void
+scegfx_command_opengl_bind_descriptor_set_sampled_image(
+  const scegfx_command_arg_t* arg)
+{
+  assert(glIsTexture(arg->bind_descriptor_set_sampled_image.texture));
+  glActiveTexture(arg->bind_descriptor_set_sampled_image.texture_unit);
+  glBindTexture(arg->bind_descriptor_set_sampled_image.target,
+                arg->bind_descriptor_set_sampled_image.texture);
+
+  glTexParameteri(arg->bind_descriptor_set_sampled_image.target,
+                  GL_TEXTURE_MAG_FILTER,
+                  arg->bind_descriptor_set_sampled_image.mag_filter);
+  glTexParameteri(arg->bind_descriptor_set_sampled_image.target,
+                  GL_TEXTURE_MIN_FILTER,
+                  arg->bind_descriptor_set_sampled_image.min_filter);
+  glTexParameteri(arg->bind_descriptor_set_sampled_image.target,
+                  GL_TEXTURE_WRAP_S,
+                  arg->bind_descriptor_set_sampled_image.texture_wrap_s);
+  glTexParameteri(arg->bind_descriptor_set_sampled_image.target,
+                  GL_TEXTURE_WRAP_T,
+                  arg->bind_descriptor_set_sampled_image.texture_wrap_t);
+  glTexParameteri(arg->bind_descriptor_set_sampled_image.target,
+                  GL_TEXTURE_WRAP_R,
+                  arg->bind_descriptor_set_sampled_image.texture_wrap_r);
+}
+
+void
+scegfx_command_opengl_bind_descriptor_set_uniform_buffer(
+  const scegfx_command_arg_t* arg)
+{
+  glBindBufferRange(GL_UNIFORM_BUFFER,
+                    arg->bind_descriptor_set_uniform_buffer.index,
+                    arg->bind_descriptor_set_uniform_buffer.buffer,
+                    arg->bind_descriptor_set_uniform_buffer.offset,
+                    arg->bind_descriptor_set_uniform_buffer.size);
+}
+
+void
 scegfx_command_opengl_bind_vao(const scegfx_command_arg_t* arg)
 {
   assert(glIsVertexArray(arg->bind_vao.vertex_array_object));

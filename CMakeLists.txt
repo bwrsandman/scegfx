@@ -39,6 +39,8 @@ file(
   include/scegfx/common.h
   include/scegfx/context.h
   include/scegfx/device_memory.h
+  include/scegfx/descriptor_set.h
+  include/scegfx/descriptor_set_layout.h
   include/scegfx/fence.h
   include/scegfx/framebuffer.h
   include/scegfx/image.h
@@ -68,6 +70,9 @@ file(
   src/backend/opengl/image_opengl.c
   src/backend/opengl/image_view_opengl.h
   src/backend/opengl/image_view_opengl.c
+  src/backend/opengl/descriptor_set_opengl.h
+  src/backend/opengl/descriptor_set_layout_opengl.h
+  src/backend/opengl/descriptor_set_layout_opengl.c
   src/backend/opengl/pipeline_opengl.h
   src/backend/opengl/pipeline_opengl.c
   src/backend/opengl/pipeline_layout_opengl.h
@@ -106,6 +111,9 @@ file(
   src/backend/vulkan/context_vulkan.h
   src/backend/vulkan/context_vulkan.c
   src/backend/vulkan/device_memory_vulkan.h
+  src/backend/vulkan/descriptor_set.h
+  src/backend/vulkan/descriptor_set_layout_vulkan.h
+  src/backend/vulkan/descriptor_set_layout_vulkan.c
   src/backend/vulkan/fence_vulkan.h
   src/backend/vulkan/fence_vulkan.c
   src/backend/vulkan/framebuffer_vulkan.h

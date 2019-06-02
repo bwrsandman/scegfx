@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "common.h"
+#include "descriptor_set_layout.h"
 
 typedef struct SDL_Window SDL_Window;
 
@@ -28,6 +29,8 @@ typedef struct scegfx_sampler_t scegfx_sampler_t;
 typedef struct scegfx_semaphore_t scegfx_semaphore_t;
 typedef struct scegfx_swapchain_t scegfx_swapchain_t;
 typedef struct scegfx_shader_module_t scegfx_shader_module_t;
+typedef struct scegfx_descriptor_set_t scegfx_descriptor_set_t;
+typedef struct scegfx_descriptor_set_layout_t scegfx_descriptor_set_layout_t;
 typedef struct scegfx_pipeline_layout_t scegfx_pipeline_layout_t;
 typedef struct scegfx_pipeline_t scegfx_pipeline_t;
 
@@ -46,6 +49,30 @@ typedef enum scegfx_debug_severity_t
   scegfx_debug_severity_performance_warning,
   scegfx_debug_severity_error,
 } scegfx_debug_severity_t;
+
+typedef struct scegfx_descriptor_image_info_t
+{
+  scegfx_sampler_t* sampler;
+  scegfx_image_view_t* image_view;
+  scegfx_image_layout_t image_layout;
+} scegfx_descriptor_image_info_t;
+
+typedef struct scegfx_descriptor_buffer_info_t
+{
+  scegfx_buffer_t* buffer;
+  scegfx_device_size_t offset;
+  scegfx_device_size_t range;
+} scegfx_descriptor_buffer_info_t;
+
+typedef struct scegfx_write_descriptor_set_t
+{
+  scegfx_descriptor_set_t* dst_set;
+  uint32_t dst_binding;
+  uint32_t descriptor_count;
+  scegfx_descriptor_type_t descriptor_type;
+  const scegfx_descriptor_image_info_t* image_info;
+  const scegfx_descriptor_buffer_info_t* buffer_info;
+} scegfx_write_descriptor_set_t;
 
 typedef struct scegfx_submit_info_t
 {
@@ -165,6 +192,16 @@ typedef struct scegfx_context_api_vtable_t
   void (*destroy_command_buffer)(scegfx_context_t* this,
                                  scegfx_command_buffer_t* command_buffer,
                                  scegfx_allocator_t* allocator);
+  scegfx_descriptor_set_layout_t* (*create_descriptor_set_layout)(
+    scegfx_context_t* this,
+    scegfx_allocator_t* allocator);
+  void (*destroy_descriptor_set_layout)(scegfx_context_t* this,
+                                        scegfx_descriptor_set_layout_t* layout,
+                                        scegfx_allocator_t* allocator);
+
+  void (*update_descriptor_sets)(scegfx_context_t* this,
+                                 uint32_t write_count,
+                                 const scegfx_write_descriptor_set_t* writes);
 
   scegfx_shader_module_t* (*create_shader_module)(
     scegfx_context_t* this,

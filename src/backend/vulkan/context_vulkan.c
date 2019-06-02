@@ -10,6 +10,8 @@
 
 #include "buffer_vulkan.h"
 #include "command_buffer_vulkan.h"
+#include "descriptor_set_layout_vulkan.h"
+#include "descriptor_set_vulkan.h"
 #include "device_memory_vulkan.h"
 #include "fence_vulkan.h"
 #include "framebuffer_vulkan.h"
@@ -1281,6 +1283,98 @@ scegfx_context_vulkan_destroy_shader_module(
   } else {
     allocator->allocator_callback(shader_module, 0, allocator->user_data);
   }
+}
+
+scegfx_descriptor_set_layout_t*
+scegfx_context_vulkan_create_descriptor_set_layout(
+  scegfx_context_t* super,
+  scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_descriptor_set_layout_t* layout = NULL;
+  if (allocator == NULL)
+    layout = malloc(sizeof(scegfx_descriptor_set_layout_vulkan_t));
+  else
+    layout = allocator->allocator_callback(
+      NULL,
+      sizeof(scegfx_descriptor_set_layout_vulkan_t),
+      allocator->user_data);
+  memset(layout, 0, sizeof(scegfx_descriptor_set_layout_vulkan_t));
+
+  layout->api_vtable = &scegfx_descriptor_set_layout_api_vtable_vulkan;
+  layout->context = super;
+
+  return layout;
+}
+
+void
+scegfx_context_vulkan_destroy_descriptor_set_layout(
+  scegfx_context_t* this,
+  scegfx_descriptor_set_layout_t* layout,
+  scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(layout);
+  } else {
+    allocator->allocator_callback(layout, 0, allocator->user_data);
+  }
+}
+
+void
+scegfx_context_vulkan_update_descriptor_sets(
+  scegfx_context_t* super,
+  uint32_t write_count,
+  const scegfx_write_descriptor_set_t* writes)
+{
+  assert(super->initialized);
+  scegfx_context_vulkan_t* this = (scegfx_context_vulkan_t*)super;
+
+  VkWriteDescriptorSet vk_writes[SCEGFX_VULKAN_MAX_DESCRIPTOR_SET_WRITES];
+  assert(write_count <= SCEGFX_VULKAN_MAX_DESCRIPTOR_SET_WRITES);
+  for (uint32_t i = 0; i < write_count; ++i) {
+    assert(writes[i].descriptor_count <= SCEGFX_VULKAN_MAX_DESCRIPTOR_COUNT);
+    scegfx_descriptor_set_vulkan_t* dst_set =
+      (scegfx_descriptor_set_vulkan_t*)writes[i].dst_set;
+
+    VkDescriptorBufferInfo vk_buffer_info[SCEGFX_VULKAN_MAX_DESCRIPTOR_COUNT];
+    VkDescriptorImageInfo vk_image_info[SCEGFX_VULKAN_MAX_DESCRIPTOR_COUNT];
+    if (writes[i].image_info) {
+      for (uint32_t j = 0; j < writes[i].descriptor_count; ++j) {
+        scegfx_sampler_vulkan_t* sampler =
+          (scegfx_sampler_vulkan_t*)writes[i].image_info[j].sampler;
+        scegfx_image_view_vulkan_t* image_view =
+          (scegfx_image_view_vulkan_t*)writes[i].image_info[j].image_view;
+        vk_image_info[j].sampler = sampler->handle;
+        vk_image_info[j].imageView = image_view->handle;
+        vk_image_info[j].imageLayout =
+          (VkImageLayout)writes[i].image_info[j].image_layout;
+      }
+    }
+    if (writes[i].buffer_info) {
+      for (uint32_t j = 0; j < writes[i].descriptor_count; ++j) {
+        scegfx_buffer_vulkan_t* buffer =
+          (scegfx_buffer_vulkan_t*)writes[i].buffer_info[j].buffer;
+        assert(buffer->super.initialized);
+        vk_buffer_info[j].buffer = buffer->handle;
+        vk_buffer_info[j].offset = writes[i].buffer_info[j].offset;
+        vk_buffer_info[j].range = writes[i].buffer_info[j].range;
+      }
+    }
+
+    VkWriteDescriptorSet write = {
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .dstSet = dst_set->handle,
+      .dstBinding = writes[i].dst_binding,
+      .descriptorCount = writes[i].descriptor_count,
+      .descriptorType = (VkDescriptorType)writes[i].descriptor_type,
+      .pImageInfo = writes[i].image_info == NULL ? NULL : vk_image_info,
+      .pBufferInfo = writes[i].buffer_info == NULL ? NULL : vk_buffer_info,
+    };
+    vk_writes[i] = write;
+  }
+
+  vkUpdateDescriptorSets(this->device, write_count, vk_writes, 0, NULL);
 }
 
 scegfx_pipeline_layout_t*

@@ -9,8 +9,55 @@
 #include <SDL_vulkan.h>
 
 #include "context_vulkan.h"
+#include "descriptor_set_layout_vulkan.h"
+#include "descriptor_set_vulkan.h"
 #include "fence_vulkan.h"
 #include "semaphore_vulkan.h"
+
+bool
+create_descriptor_pool(scegfx_swapchain_vulkan_t* this)
+{
+  const scegfx_context_vulkan_t* context =
+    (const scegfx_context_vulkan_t*)this->super.context;
+  VkResult res;
+  VkDescriptorPoolSize pool_sizes[2] = {
+    [0] = {
+      .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .descriptorCount = (uint32_t)this->super.image_count,
+    },
+    [1] = {
+      .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+      .descriptorCount = (uint32_t)this->super.image_count,
+    },
+  };
+
+  VkDescriptorPoolCreateInfo info = {
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+    .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+    .poolSizeCount = sizeof(pool_sizes) / sizeof(pool_sizes[0]),
+    .pPoolSizes = pool_sizes,
+    .maxSets = this->super.image_count,
+  };
+  res = vkCreateDescriptorPool(
+    context->device, &info, NULL, &this->descriptor_pool);
+  if (res != VK_SUCCESS) {
+    context->super.debug_callback(scegfx_debug_severity_error,
+                                  __LINE__,
+                                  FILE_BASENAME,
+                                  "Unable to create descriptor pool");
+    return false;
+  }
+
+  return true;
+}
+
+void
+destroy_descriptor_pool(scegfx_swapchain_vulkan_t* this)
+{
+  const scegfx_context_vulkan_t* context =
+    (const scegfx_context_vulkan_t*)this->super.context;
+  vkDestroyDescriptorPool(context->device, this->descriptor_pool, NULL);
+}
 
 bool
 scegfx_swapchain_vulkan_initialize(scegfx_swapchain_t* super)
@@ -130,6 +177,9 @@ scegfx_swapchain_vulkan_initialize(scegfx_swapchain_t* super)
     this->images[i].super.extent.depth = 1;
     this->images[i].super.initialized = true;
   }
+  if (!create_descriptor_pool(this)) {
+    return false;
+  }
   this->super.initialized = true;
   return true;
 }
@@ -140,6 +190,7 @@ scegfx_swapchain_vulkan_terminate(scegfx_swapchain_t* super)
   assert(super->initialized);
   scegfx_swapchain_vulkan_t* this = (scegfx_swapchain_vulkan_t*)super;
   scegfx_context_vulkan_t* context = (scegfx_context_vulkan_t*)super->context;
+  destroy_descriptor_pool(this);
   vkDestroySwapchainKHR(context->device, this->handle, NULL);
   super->initialized = false;
 }
@@ -181,4 +232,62 @@ scegfx_swapchain_vulkan_acquire_next_image(scegfx_swapchain_t* super,
   }
 
   return true;
+}
+
+scegfx_descriptor_set_t*
+scegfx_swapchain_vulkan_allocate_descriptor_set(
+  scegfx_swapchain_t* super,
+  const scegfx_descriptor_set_layout_t* layout,
+  scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  assert(layout->initialized);
+  scegfx_swapchain_vulkan_t* this = (scegfx_swapchain_vulkan_t*)super;
+  scegfx_context_vulkan_t* context = (scegfx_context_vulkan_t*)super->context;
+  scegfx_descriptor_set_layout_vulkan_t* vk_layout =
+    (scegfx_descriptor_set_layout_vulkan_t*)layout;
+
+  VkDescriptorSetAllocateInfo info = {
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+    .descriptorPool = this->descriptor_pool,
+    .descriptorSetCount = 1,
+    .pSetLayouts = &vk_layout->handle,
+  };
+
+  VkDescriptorSet vk_descriptor_set;
+  vkAllocateDescriptorSets(context->device, &info, &vk_descriptor_set);
+
+  scegfx_descriptor_set_vulkan_t* descriptor_set = NULL;
+  if (allocator == NULL)
+    descriptor_set = malloc(sizeof(scegfx_descriptor_set_vulkan_t));
+  else
+    descriptor_set = allocator->allocator_callback(
+      NULL, sizeof(scegfx_descriptor_set_vulkan_t), allocator->user_data);
+  memset(descriptor_set, 0, sizeof(scegfx_descriptor_set_vulkan_t));
+  descriptor_set->handle = vk_descriptor_set;
+
+  descriptor_set->super.initialized = true;
+  return (scegfx_descriptor_set_t*)descriptor_set;
+}
+
+void
+scegfx_swapchain_vulkan_free_descriptor_set(
+  scegfx_swapchain_t* super,
+  scegfx_descriptor_set_t* descriptor_set,
+  scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_swapchain_vulkan_t* this = (scegfx_swapchain_vulkan_t*)super;
+  scegfx_context_vulkan_t* context = (scegfx_context_vulkan_t*)super->context;
+  scegfx_descriptor_set_vulkan_t* vk_descriptor_set =
+    (scegfx_descriptor_set_vulkan_t*)descriptor_set;
+
+  vkFreeDescriptorSets(
+    context->device, this->descriptor_pool, 1, &vk_descriptor_set->handle);
+
+  if (allocator == NULL) {
+    free(descriptor_set);
+  } else {
+    allocator->allocator_callback(descriptor_set, 0, allocator->user_data);
+  }
 }

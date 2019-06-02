@@ -7,6 +7,7 @@
 
 #if defined(SCEGFX_C_SOURCE)
 typedef float vec4[4];
+typedef float mat4[16];
 #endif // defined(SCE_C_SOURCE)
 
 // Vertex shader inputs
@@ -16,5 +17,15 @@ typedef float vec4[4];
 #define F_COLOR_LOCATION 0
 // Framebuffer inputs
 #define FB_COLOR_LOCATION 0
+
+// Vertex shader uniform inputs
+#define V_UNIFORM_LOCATION 0
+
+struct uniform_t
+{
+  mat4 model;
+  mat4 view;
+  mat4 projection;
+};
 
 #endif // SCEGFX_EXAMPLE_HELLO_SCEGFX_BRIDGING_HEADER_H
