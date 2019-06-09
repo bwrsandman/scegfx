@@ -14,6 +14,7 @@
 #include "device_memory_opengl.h"
 #include "fence_opengl.h"
 #include "image_opengl.h"
+#include "image_view_opengl.h"
 #include "semaphore_opengl.h"
 #include "swapchain_opengl.h"
 
@@ -664,6 +665,39 @@ scegfx_context_opengl_get_image_memory_requirements(
 
   memory_requirements->size = dim * format_size;
   memory_requirements->memory_type_bits = image_gl->super.format;
+}
+
+scegfx_image_view_t*
+scegfx_context_opengl_create_image_view(scegfx_context_t* super,
+                                        scegfx_allocator_t* allocator)
+{
+
+  assert(super->initialized);
+  scegfx_image_view_t* view = NULL;
+  if (allocator == NULL)
+    view = malloc(sizeof(scegfx_image_view_opengl_t));
+  else
+    view = allocator->allocator_callback(
+      NULL, sizeof(scegfx_image_view_opengl_t), allocator->user_data);
+  memset(view, 0, sizeof(scegfx_image_view_opengl_t));
+
+  view->api_vtable = &scegfx_image_view_api_vtable_opengl;
+  view->context = super;
+
+  return view;
+}
+
+void
+scegfx_context_opengl_destroy_image_view(scegfx_context_t* this,
+                                         scegfx_image_view_t* view,
+                                         scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(view);
+  } else {
+    allocator->allocator_callback(view, 0, allocator->user_data);
+  }
 }
 
 bool

@@ -17,6 +17,7 @@ typedef struct scegfx_device_memory_allocate_info_t
 typedef struct scegfx_device_memory_requirements_t
   scegfx_device_memory_requirements_t;
 typedef struct scegfx_image_t scegfx_image_t;
+typedef struct scegfx_image_view_t scegfx_image_view_t;
 typedef struct scegfx_mapped_device_memory_range_t
   scegfx_mapped_device_memory_range_t;
 typedef struct scegfx_fence_t scegfx_fence_t;
@@ -112,6 +113,12 @@ typedef struct scegfx_context_api_vtable_t
     const scegfx_context_t* this,
     const scegfx_image_t* image,
     scegfx_device_memory_requirements_t* memory_requirements);
+
+  scegfx_image_view_t* (*create_image_view)(scegfx_context_t* this,
+                                            scegfx_allocator_t* allocator);
+  void (*destroy_image_view)(scegfx_context_t* this,
+                             scegfx_image_view_t* view,
+                             scegfx_allocator_t* allocator);
 
   bool (*make_current)(scegfx_context_t* this);
 } scegfx_context_api_vtable_t;

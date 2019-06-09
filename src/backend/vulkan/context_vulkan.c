@@ -11,6 +11,7 @@
 #include "buffer_vulkan.h"
 #include "device_memory_vulkan.h"
 #include "fence_vulkan.h"
+#include "image_view_vulkan.h"
 #include "semaphore_vulkan.h"
 #include "swapchain_vulkan.h"
 
@@ -1027,6 +1028,38 @@ scegfx_context_vulkan_get_image_memory_requirements(
   memory_requirements->size = vk_memory_requirements.size;
   memory_requirements->alignment = vk_memory_requirements.alignment;
   memory_requirements->memory_type_bits = vk_memory_requirements.memoryTypeBits;
+}
+
+scegfx_image_view_t*
+scegfx_vulkan_create_image_view(scegfx_context_t* super,
+                                scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_image_view_t* view = NULL;
+  if (allocator == NULL)
+    view = malloc(sizeof(scegfx_image_view_vulkan_t));
+  else
+    view = allocator->allocator_callback(
+      NULL, sizeof(scegfx_image_view_vulkan_t), allocator->user_data);
+  memset(view, 0, sizeof(scegfx_image_view_vulkan_t));
+
+  view->api_vtable = &scegfx_image_view_api_vtable_vulkan;
+  view->context = super;
+
+  return view;
+}
+
+void
+scegfx_vulkan_destroy_image_view(scegfx_context_t* this,
+                                 scegfx_image_view_t* view,
+                                 scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(view);
+  } else {
+    allocator->allocator_callback(view, 0, allocator->user_data);
+  }
 }
 
 bool

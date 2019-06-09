@@ -128,6 +128,14 @@ scegfx_context_opengl_destroy_semaphore(scegfx_context_t* this,
                                         scegfx_semaphore_t* semaphore,
                                         scegfx_allocator_t* allocator);
 
+scegfx_image_view_t*
+scegfx_context_opengl_create_image_view(scegfx_context_t* super,
+                                        scegfx_allocator_t* allocator);
+void
+scegfx_context_opengl_destroy_image_view(scegfx_context_t* this,
+                                         scegfx_image_view_t* view,
+                                         scegfx_allocator_t* allocator);
+
 bool
 scegfx_context_opengl_make_current(scegfx_context_t* this);
 
@@ -157,6 +165,8 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_opengl = {
   .destroy_fence = scegfx_context_opengl_destroy_fence,
   .create_semaphore = scegfx_context_opengl_create_semaphore,
   .destroy_semaphore = scegfx_context_opengl_destroy_semaphore,
+  .create_image_view = scegfx_context_opengl_create_image_view,
+  .destroy_image_view = scegfx_context_opengl_destroy_image_view,
   .make_current = scegfx_context_opengl_make_current,
 };
 

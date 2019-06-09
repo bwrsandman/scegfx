@@ -32,6 +32,13 @@ typedef enum scegfx_memory_properties_t
   scegfx_memory_properties_protected = 0x0020u,
 } scegfx_memory_properties_t;
 
+typedef enum scegfx_image_aspect_t
+{
+  scegfx_image_aspect_color = 0x0001,
+  scegfx_image_aspect_depth = 0x0002,
+  scegfx_image_aspect_stencil = 0x0004,
+} scegfx_image_aspect_t;
+
 typedef enum scegfx_image_layout_t
 {
   scegfx_image_layout_undefined = 0,

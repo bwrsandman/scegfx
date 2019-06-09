@@ -9,6 +9,7 @@
 
 #include <scegfx/context.h>
 #include <scegfx/fence.h>
+#include <scegfx/image_view.h>
 #include <scegfx/semaphore.h>
 #include <scegfx/swapchain.h>
 
@@ -51,6 +52,7 @@ struct app_t {
   scegfx_semaphore_t* acquire_semaphore;
   scegfx_semaphore_t* render_semaphore;
   scegfx_image_t** swapchain_image;
+  scegfx_image_view_t** swapchain_image_view;
 } app = {};
 
 args_t default_args = {
@@ -264,9 +266,18 @@ init_swapchain()
 
   app.swapchain_image =
     malloc(sizeof(scegfx_image_t*) * app.swapchain->image_count);
+  app.swapchain_image_view =
+    malloc(sizeof(scegfx_image_view_t*) * app.swapchain->image_count);
+
   for (uint32_t i = 0; i < app.swapchain->image_count; ++i) {
+    app.swapchain_image_view[i] =
+      app.context->api_vtable->create_image_view(app.context, NULL);
     app.swapchain_image[i] =
       app.swapchain->api_vtable->get_image(app.swapchain, i);
+    app.swapchain_image_view[i]->api_vtable->initialize(
+      app.swapchain_image_view[i],
+      app.swapchain_image[i],
+      scegfx_image_aspect_color);
   }
 }
 
@@ -340,10 +351,15 @@ run_loop()
 void
 clean_up()
 {
+  uint32_t image_count = app.swapchain->image_count;
   app.acquire_fence->api_vtable->terminate(app.acquire_fence);
   app.present_fence->api_vtable->terminate(app.present_fence);
   app.acquire_semaphore->api_vtable->terminate(app.acquire_semaphore);
   app.render_semaphore->api_vtable->terminate(app.render_semaphore);
+  for (uint32_t i = 0; i < image_count; ++i) {
+    app.swapchain_image_view[i]->api_vtable->terminate(
+      app.swapchain_image_view[i]);
+  }
 
   app.swapchain->api_vtable->terminate(app.swapchain);
 
@@ -353,6 +369,10 @@ clean_up()
     app.context, app.acquire_semaphore, NULL);
   app.context->api_vtable->destroy_semaphore(
     app.context, app.render_semaphore, NULL);
+  for (uint32_t i = 0; i < image_count; ++i) {
+    app.context->api_vtable->destroy_image_view(
+      app.context, app.swapchain_image_view[i], NULL);
+  }
 
   app.context->api_vtable->destroy_swapchain(app.context, app.swapchain, NULL);
 
@@ -363,6 +383,7 @@ clean_up()
   SDL_Quit();
 
   free(app.swapchain_image);
+  free(app.swapchain_image_view);
 }
 
 int
