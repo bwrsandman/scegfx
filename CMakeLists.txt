@@ -82,6 +82,8 @@ file(
   src/backend/opengl/shader_module_opengl.c
   src/backend/opengl/swapchain_opengl.h
   src/backend/opengl/swapchain_opengl.c
+  src/backend/opengl/vao_map.h
+  src/backend/opengl/vao_map.c
 )
 
 file(
