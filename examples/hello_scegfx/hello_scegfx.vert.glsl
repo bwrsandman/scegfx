@@ -11,9 +11,9 @@ out gl_PerVertex
 };
 
 layout(location = V_POSITION_LOCATION) in vec4 v_position;
-layout(location = V_COLOR_LOCATION) in vec4 v_color;
+layout(location = V_UV_LOCATION) in vec2 v_uv;
 
-layout(location = F_COLOR_LOCATION) out vec4 f_color;
+layout(location = F_UV_LOCATION) out vec2 f_uv;
 
 layout (binding = V_UNIFORM_LOCATION) uniform v_uniform {
     uniform_t u;
@@ -22,5 +22,5 @@ layout (binding = V_UNIFORM_LOCATION) uniform v_uniform {
 void main()
 {
     gl_Position = u.projection * u.view * u.model * v_position;
-    f_color = v_color;
+    f_uv = v_uv;
 }

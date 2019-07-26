@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 #include <scegfx/buffer.h>
 #include <scegfx/command_buffer.h>
@@ -16,10 +17,12 @@
 #include <scegfx/device_memory.h>
 #include <scegfx/fence.h>
 #include <scegfx/framebuffer.h>
+#include <scegfx/image.h>
 #include <scegfx/image_view.h>
 #include <scegfx/pipeline.h>
 #include <scegfx/pipeline_layout.h>
 #include <scegfx/render_pass.h>
+#include <scegfx/sampler.h>
 #include <scegfx/semaphore.h>
 #include <scegfx/shader_module.h>
 #include <scegfx/swapchain.h>
@@ -49,7 +52,7 @@ typedef struct args_t
 typedef struct
 {
   vec4 position;
-  vec4 color;
+  vec2 uv;
 } vertex_t;
 
 const float fov_y = 110.0f;
@@ -59,35 +62,35 @@ const float far = 1000.0f;
 vertex_t vertices[8] = {
     [0] = {
         .position = { -1.0f, -1.0f, 1.0f, 1.0f },
-        .color = { 0.0f, 1.0f, 1.0f, 1.0f },
+        .uv = { 0.0f, 0.0f},
     },
     [1] = {
         .position = { -1.0f, 1.0f, 1.0f, 1.0f },
-        .color = { 1.0f, 1.0f, 1.0f, 1.0f },
+        .uv = { 0.0f, 1.0f},
     },
     [2] = {
         .position = { 1.0f, 1.0f, 1.0f, 1.0f },
-        .color = { 1.0f, 1.0f, 0.0f, 1.0f },
+        .uv = { 1.0f, 1.0f},
     },
     [3] = {
         .position = { 1.0f, -1.0f, 1.0f, 1.0f },
-        .color = { 1.0f, 0.0f, 0.0f, 1.0f },
+        .uv = { 1.0f, 0.0f},
     },
     [4] = {
         .position = { 1.0f, -1.0f, -1.0f, 1.0f },
-        .color = { 1.0f, 0.0f, 1.0f, 1.0f },
+        .uv = { 1.0f, 0.0f},
     },
     [5] = {
         .position = { 1.0f, 1.0f, -1.0f, 1.0f },
-        .color = { 0.0f, 0.0f, 1.0f, 1.0f },
+        .uv = { 1.0f, 1.0f},
     },
     [6] = {
         .position = { -1.0f, 1.0f, -1.0f, 1.0f },
-        .color = { 0.0f, 0.0f, 0.0f, 1.0f },
+        .uv = { 0.0f, 1.0f},
     },
     [7] = {
         .position = { -1.0f, -1.0f, -1.0f, 1.0f },
-        .color = { 0.0f, 1.0f, 0.0f, 1.0f },
+        .uv = { 0.0f, 0.0f},
     },
 };
 
@@ -135,6 +138,10 @@ struct app_t {
   struct uniform_t uniform;
   scegfx_buffer_t** uniform_buffers;
   scegfx_device_memory_t** uniform_buffers_memory;
+  scegfx_image_t* texture;
+  scegfx_device_memory_t* texture_memory;
+  scegfx_image_view_t* texture_view;
+  scegfx_sampler_t* texture_sampler;
   scegfx_descriptor_set_t** descriptor_sets;
   scegfx_command_buffer_t** cmd;
   scegfx_render_pass_t* render_pass;
@@ -527,12 +534,18 @@ init_pipeline()
     scegfx_descriptor_set_layout_t* set_layout =
       app.context->api_vtable->create_descriptor_set_layout(app.context, NULL);
     {
-      scegfx_descriptor_set_binding_t set_bindings[1] = {
+      scegfx_descriptor_set_binding_t set_bindings[2] = {
           [0] = {
               .binding = V_UNIFORM_LOCATION,
               .descriptor_type = scegfx_descriptor_type_uniform_buffer,
               .descriptor_count = 1,
               .stage = scegfx_stage_type_vertex,
+          },
+          [1] = {
+              .binding = F_IMAGE_SAMPLER_LOCATION,
+              .descriptor_type = scegfx_descriptor_type_image_sampler,
+              .descriptor_count = 1,
+              .stage = scegfx_stage_type_fragment,
           },
       };
       scegfx_descriptor_set_layout_create_info_t info = {
@@ -560,13 +573,25 @@ init_pipeline()
         .offset = 0,
         .range = sizeof(struct uniform_t),
       };
-      scegfx_write_descriptor_set_t descriptor_writes[1] = {
+      scegfx_descriptor_image_info_t image_info = {
+        .sampler = app.texture_sampler,
+        .image_view = app.texture_view,
+        .image_layout = scegfx_image_layout_shader_read_only_optimal,
+      };
+      scegfx_write_descriptor_set_t descriptor_writes[2] = {
           [0] = {
               .dst_set = app.descriptor_sets[i],
               .dst_binding = V_UNIFORM_LOCATION,
               .descriptor_count = 1,
               .descriptor_type = scegfx_descriptor_type_uniform_buffer,
               .buffer_info = &buffer_info,
+          },
+          [1] = {
+              .dst_set = app.descriptor_sets[i],
+              .dst_binding = F_IMAGE_SAMPLER_LOCATION,
+              .descriptor_count = 1,
+              .descriptor_type = scegfx_descriptor_type_image_sampler,
+              .image_info = &image_info,
           },
       };
       app.context->api_vtable->update_descriptor_sets(
@@ -586,9 +611,9 @@ init_pipeline()
             .offset = offsetof(vertex_t, position),
         },
         [1] = {
-            .location = V_COLOR_LOCATION,
-            .format = scegfx_format_r32g32b32a32_sfloat,
-            .offset = offsetof(vertex_t, color),
+            .location = V_UV_LOCATION,
+            .format = scegfx_format_r32g32_sfloat,
+            .offset = offsetof(vertex_t, uv),
         },
     };
     scegfx_pipeline_create_info_t info = {
@@ -731,6 +756,199 @@ init_geometry()
                        indices,
                        &app.index_buffer,
                        &app.index_buffer_memory);
+}
+
+bool
+init_textures()
+{
+  if (IMG_Init(IMG_INIT_PNG) == 0) {
+    fprintf(stderr,
+            "SDL_image could not initialize! SDL_image Error: %s\n",
+            IMG_GetError());
+    return false;
+  }
+  const char* base_path = SDL_GetBasePath();
+  char filename[0x400];
+  switch (app.args.backend) {
+    case args_backend_opengl:
+#if defined(EMSCRIPTEN)
+      snprintf(filename, sizeof(filename), "%swebgl-logo.png", base_path);
+#else
+      snprintf(filename, sizeof(filename), "%sopengl-logo.png", base_path);
+#endif
+      break;
+    case args_backend_vulkan:
+      snprintf(filename, sizeof(filename), "%svulkan-logo.png", base_path);
+      break;
+    case args_backend_webgpu:
+      snprintf(filename, sizeof(filename), "%swebgpu-logo.png", base_path);
+      break;
+  }
+  SDL_Surface* surface = IMG_Load(filename);
+  if (surface == NULL) {
+    fprintf(stderr,
+            "SDL_image could not load image! SDL_image Error: %s\n",
+            IMG_GetError());
+    return false;
+  }
+  app.texture = app.context->api_vtable->create_image(app.context, NULL);
+  scegfx_extent_3d_t image_extent = {
+    .width = (uint32_t)surface->w,
+    .height = (uint32_t)surface->h,
+    .depth = 1,
+  };
+  {
+    scegfx_image_create_info_t info = {
+      .image_type = scegfx_image_type_2d,
+      .format = scegfx_format_r8g8b8a8_unorm,
+      .extent = image_extent,
+      .tiling = scegfx_image_tiling_linear,
+      .usage = scegfx_image_usage_sampled | scegfx_image_usage_transfer_dst,
+      .initial_layout = scegfx_image_layout_undefined,
+    };
+    app.texture->api_vtable->initialize(app.texture, &info);
+  }
+  scegfx_device_memory_requirements_t memory_requirements = {};
+  app.context->api_vtable->get_image_memory_requirements(
+    app.context, app.texture, &memory_requirements);
+  uint32_t memory_type_index = app.context->api_vtable->get_memory_type(
+    app.context,
+    memory_requirements.memory_type_bits,
+    scegfx_memory_properties_device_local);
+  {
+    scegfx_device_memory_allocate_info_t info = {
+      .allocation_size = memory_requirements.size,
+      .memory_type_index = memory_type_index,
+    };
+    app.texture_memory =
+      app.context->api_vtable->allocate_memory(app.context, &info, NULL);
+  }
+  app.context->api_vtable->bind_image_memory(
+    app.context, app.texture, app.texture_memory, 0);
+
+  {
+    scegfx_buffer_t* staging_buffer =
+      app.context->api_vtable->create_buffer(app.context, NULL);
+    staging_buffer->api_vtable->initialize(staging_buffer,
+                                           memory_requirements.size,
+                                           scegfx_buffer_usage_transfer_src);
+
+    app.context->api_vtable->get_buffer_memory_requirements(
+      app.context, staging_buffer, &memory_requirements);
+    memory_type_index = app.context->api_vtable->get_memory_type(
+      app.context,
+      memory_requirements.memory_type_bits,
+      scegfx_memory_properties_host_visible |
+        scegfx_memory_properties_host_coherent);
+    scegfx_device_memory_allocate_info_t info = {
+      .allocation_size = memory_requirements.size,
+      .memory_type_index = memory_type_index,
+    };
+    scegfx_device_memory_t* staging_memory =
+      app.context->api_vtable->allocate_memory(app.context, &info, NULL);
+
+    void* mapped = 0;
+    app.context->api_vtable->map_memory(
+      app.context, staging_memory, 0, memory_requirements.size, &mapped);
+    memcpy(mapped, surface->pixels, memory_requirements.size);
+    app.context->api_vtable->unmap_memory(app.context, staging_memory);
+
+    IMG_Quit();
+
+    app.context->api_vtable->bind_buffer_memory(
+      app.context, staging_buffer, staging_memory, 0);
+
+    scegfx_command_buffer_t* staging_command_buffer =
+      app.context->api_vtable->create_command_buffer(app.context, NULL);
+    staging_command_buffer->api_vtable->initialize(staging_command_buffer);
+    staging_command_buffer->api_vtable->begin(staging_command_buffer, false);
+
+    scegfx_image_memory_barrier_t barrier = {
+        .src_access_mask = 0,
+        .dst_access_mask = scegfx_access_transfer_write,
+        .old_layout = scegfx_image_layout_undefined,
+        .new_layout = scegfx_image_layout_transfer_dst_optimal,
+        .image = app.texture,
+        .subresource_range = {
+          .aspect_mask = scegfx_image_aspect_color,
+          .level_count = 1,
+          .layer_count = 1,
+        },
+    };
+    staging_command_buffer->api_vtable->pipeline_barrier(
+      staging_command_buffer,
+      scegfx_pipeline_stage_top_of_pipe,
+      scegfx_pipeline_stage_transfer,
+      1,
+      &barrier);
+
+    scegfx_buffer_image_copy_t region = {
+        .image_subresource = {
+            .aspect_mask = scegfx_image_aspect_color,
+            .layer_count = 1,
+        },
+        .image_extent = image_extent,
+    };
+    staging_command_buffer->api_vtable->copy_buffer_to_image(
+      staging_command_buffer,
+      staging_buffer,
+      app.texture,
+      scegfx_image_layout_transfer_dst_optimal,
+      &region);
+
+    barrier.src_access_mask = scegfx_access_transfer_write;
+    barrier.dst_access_mask = scegfx_access_shader_read;
+    barrier.old_layout = scegfx_image_layout_transfer_dst_optimal;
+    barrier.new_layout = scegfx_image_layout_shader_read_only_optimal;
+
+    staging_command_buffer->api_vtable->pipeline_barrier(
+      staging_command_buffer,
+      scegfx_pipeline_stage_transfer,
+      scegfx_pipeline_stage_fragment_shader,
+      1,
+      &barrier);
+
+    staging_command_buffer->api_vtable->end(staging_command_buffer);
+
+    scegfx_submit_info_t submit_info = {
+      .command_buffer = staging_command_buffer,
+    };
+    scegfx_fence_t* staging_fence =
+      app.context->api_vtable->create_fence(app.context, NULL);
+    staging_fence->api_vtable->initialize(staging_fence, false);
+    app.context->api_vtable->submit_to_queue(
+      app.context, &submit_info, staging_fence);
+
+    if (!staging_fence->api_vtable->wait(staging_fence, UINT64_MAX)) {
+      fprintf(stderr, "error: could not wait on staging fence\n");
+    }
+
+    staging_command_buffer->api_vtable->terminate(staging_command_buffer);
+    staging_fence->api_vtable->terminate(staging_fence);
+    app.context->api_vtable->destroy_fence(app.context, staging_fence, NULL);
+    app.context->api_vtable->free_memory(app.context, staging_memory, NULL);
+    staging_buffer->api_vtable->terminate(staging_buffer);
+    app.context->api_vtable->destroy_buffer(app.context, staging_buffer, NULL);
+  }
+
+  app.texture_view =
+    app.context->api_vtable->create_image_view(app.context, NULL);
+  app.texture_view->api_vtable->initialize(
+    app.texture_view, app.texture, scegfx_image_aspect_color);
+  app.texture_sampler =
+    app.context->api_vtable->create_sampler(app.context, NULL);
+  {
+    scegfx_sampler_create_info_t info = {
+      .mag_filter = scegfx_filter_linear,
+      .min_filter = scegfx_filter_linear,
+      .mipmap_mode = scegfx_sampler_mipmap_mode_linear,
+      .address_mode_u = scegfx_sampler_address_mode_repeat,
+      .address_mode_v = scegfx_sampler_address_mode_repeat,
+      .address_mode_w = scegfx_sampler_address_mode_repeat,
+    };
+    app.texture_sampler->api_vtable->initialize(app.texture_sampler, &info);
+  }
+  return true;
 }
 
 void
@@ -989,6 +1207,10 @@ clean_up()
     app.framebuffer[i]->api_vtable->terminate(app.framebuffer[i]);
     app.cmd[i]->api_vtable->terminate(app.cmd[i]);
   }
+  app.texture_sampler->api_vtable->terminate(app.texture_sampler);
+  app.texture_view->api_vtable->terminate(app.texture_view);
+  app.context->api_vtable->free_memory(app.context, app.texture_memory, NULL);
+  app.texture->api_vtable->terminate(app.texture);
   app.render_pass->api_vtable->terminate(app.render_pass);
 
   app.context->api_vtable->free_memory(
@@ -1058,6 +1280,9 @@ main(int argc, char* argv[])
   init_render_pass();
   init_framebuffer();
   init_uniforms();
+  if (!init_textures()) {
+    return 1;
+  }
   if (!init_pipeline()) {
     return 1;
   }

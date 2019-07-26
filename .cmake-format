@@ -49,7 +49,8 @@ additional_commands = {
   },
   "cmake_parse_arguments": {
     "kwargs": {
-      "SPIRV_COMPILATION": 4
+      "SPIRV_COMPILATION": 4,
+      "FILE_COPY": 4
     }
   },
   "mark_for_spirv_compilation": {

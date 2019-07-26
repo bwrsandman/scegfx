@@ -15,7 +15,6 @@
 #include "commands_opengl.h"
 #include "context_opengl.h"
 #include "descriptor_set_opengl.h"
-#include "device_memory_opengl.h"
 #include "framebuffer_opengl.h"
 #include "image_opengl.h"
 #include "pipeline_opengl.h"

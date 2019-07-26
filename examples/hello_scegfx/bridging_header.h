@@ -6,20 +6,22 @@
 #define SCEGFX_EXAMPLE_HELLO_SCEGFX_BRIDGING_HEADER_H
 
 #if defined(SCEGFX_C_SOURCE)
+typedef float vec2[2];
 typedef float vec4[4];
 typedef float mat4[16];
 #endif // defined(SCE_C_SOURCE)
 
 // Vertex shader inputs
 #define V_POSITION_LOCATION 0
-#define V_COLOR_LOCATION 1
+#define V_UV_LOCATION 1
 // Fragment shader inputs
-#define F_COLOR_LOCATION 0
+#define F_UV_LOCATION 0
 // Framebuffer inputs
 #define FB_COLOR_LOCATION 0
 
 // Vertex shader uniform inputs
 #define V_UNIFORM_LOCATION 0
+#define F_IMAGE_SAMPLER_LOCATION 1
 
 struct uniform_t
 {

@@ -5,10 +5,11 @@
 
 #include "bridging_header.h"
 
-layout(location = F_COLOR_LOCATION) in vec4 f_color;
+layout(location = F_UV_LOCATION) in vec2 f_uv;
+layout(binding = F_IMAGE_SAMPLER_LOCATION) uniform sampler2D texSampler;
 layout(location = FB_COLOR_LOCATION) out vec4 fb_color;
 
 void main()
 {
-    fb_color = f_color;
+    fb_color = texture(texSampler, f_uv);
 }
