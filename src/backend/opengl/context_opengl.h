@@ -135,6 +135,13 @@ void
 scegfx_context_opengl_destroy_image_view(scegfx_context_t* this,
                                          scegfx_image_view_t* view,
                                          scegfx_allocator_t* allocator);
+scegfx_sampler_t*
+scegfx_context_opengl_create_sampler(scegfx_context_t* super,
+                                     scegfx_allocator_t* allocator);
+void
+scegfx_context_opengl_destroy_sampler(scegfx_context_t* this,
+                                      scegfx_sampler_t* sampler,
+                                      scegfx_allocator_t* allocator);
 
 bool
 scegfx_context_opengl_make_current(scegfx_context_t* this);
@@ -167,6 +174,8 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_opengl = {
   .destroy_semaphore = scegfx_context_opengl_destroy_semaphore,
   .create_image_view = scegfx_context_opengl_create_image_view,
   .destroy_image_view = scegfx_context_opengl_destroy_image_view,
+  .create_sampler = scegfx_context_opengl_create_sampler,
+  .destroy_sampler = scegfx_context_opengl_destroy_sampler,
   .make_current = scegfx_context_opengl_make_current,
 };
 

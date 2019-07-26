@@ -12,6 +12,7 @@
 #include "device_memory_vulkan.h"
 #include "fence_vulkan.h"
 #include "image_view_vulkan.h"
+#include "sampler_vulkan.h"
 #include "semaphore_vulkan.h"
 #include "swapchain_vulkan.h"
 
@@ -1059,6 +1060,38 @@ scegfx_vulkan_destroy_image_view(scegfx_context_t* this,
     free(view);
   } else {
     allocator->allocator_callback(view, 0, allocator->user_data);
+  }
+}
+
+scegfx_sampler_t*
+scegfx_context_vulkan_create_sampler(scegfx_context_t* super,
+                                     scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_sampler_t* sampler = NULL;
+  if (allocator == NULL)
+    sampler = malloc(sizeof(scegfx_sampler_vulkan_t));
+  else
+    sampler = allocator->allocator_callback(
+      NULL, sizeof(scegfx_sampler_vulkan_t), allocator->user_data);
+  memset(sampler, 0, sizeof(scegfx_sampler_vulkan_t));
+
+  sampler->api_vtable = &scegfx_sampler_api_vtable_vulkan;
+  sampler->context = super;
+
+  return sampler;
+}
+
+void
+scegfx_context_vulkan_destroy_sampler(scegfx_context_t* this,
+                                      scegfx_sampler_t* sampler,
+                                      scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(sampler);
+  } else {
+    allocator->allocator_callback(sampler, 0, allocator->user_data);
   }
 }
 

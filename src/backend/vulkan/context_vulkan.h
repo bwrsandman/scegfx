@@ -155,6 +155,14 @@ scegfx_vulkan_destroy_image_view(scegfx_context_t* this,
                                  scegfx_image_view_t* view,
                                  scegfx_allocator_t* allocator);
 
+scegfx_sampler_t*
+scegfx_context_vulkan_create_sampler(scegfx_context_t* this,
+                                     scegfx_allocator_t* allocator);
+void
+scegfx_context_vulkan_destroy_sampler(scegfx_context_t* this,
+                                      scegfx_sampler_t* sampler,
+                                      scegfx_allocator_t* allocator);
+
 bool
 scegfx_context_vulkan_make_current(scegfx_context_t* this);
 
@@ -186,6 +194,8 @@ static const scegfx_context_api_vtable_t scegfx_context_api_vtable_vulkan = {
     scegfx_context_vulkan_get_image_memory_requirements,
   .create_image_view = scegfx_vulkan_create_image_view,
   .destroy_image_view = scegfx_vulkan_destroy_image_view,
+  .create_sampler = scegfx_context_vulkan_create_sampler,
+  .destroy_sampler = scegfx_context_vulkan_destroy_sampler,
   .make_current = scegfx_context_vulkan_make_current,
 };
 

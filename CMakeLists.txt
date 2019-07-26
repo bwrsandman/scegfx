@@ -41,6 +41,7 @@ file(
   include/scegfx/fence.h
   include/scegfx/image.h
   include/scegfx/image_view.h
+  include/scegfx/sampler.h
   include/scegfx/semaphore.h
   include/scegfx/swapchain.h
   src/context.c
@@ -55,6 +56,8 @@ file(
   src/backend/opengl/image_opengl.c
   src/backend/opengl/image_view_opengl.h
   src/backend/opengl/image_view_opengl.c
+  src/backend/opengl/sampler_opengl.h
+  src/backend/opengl/sampler_opengl.c
   src/backend/opengl/semaphore_opengl.h
   src/backend/opengl/semaphore_opengl.c
   src/backend/opengl/swapchain_opengl.h
@@ -87,6 +90,8 @@ file(
   src/backend/vulkan/image_view_vulkan.c
   src/backend/vulkan/semaphore_vulkan.h
   src/backend/vulkan/semaphore_vulkan.c
+  src/backend/vulkan/sampler_vulkan.h
+  src/backend/vulkan/sampler_vulkan.c
   src/backend/vulkan/swapchain_vulkan.h
   src/backend/vulkan/swapchain_vulkan.c
 )

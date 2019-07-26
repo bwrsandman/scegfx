@@ -15,6 +15,7 @@
 #include "fence_opengl.h"
 #include "image_opengl.h"
 #include "image_view_opengl.h"
+#include "sampler_opengl.h"
 #include "semaphore_opengl.h"
 #include "swapchain_opengl.h"
 
@@ -671,7 +672,6 @@ scegfx_image_view_t*
 scegfx_context_opengl_create_image_view(scegfx_context_t* super,
                                         scegfx_allocator_t* allocator)
 {
-
   assert(super->initialized);
   scegfx_image_view_t* view = NULL;
   if (allocator == NULL)
@@ -697,6 +697,38 @@ scegfx_context_opengl_destroy_image_view(scegfx_context_t* this,
     free(view);
   } else {
     allocator->allocator_callback(view, 0, allocator->user_data);
+  }
+}
+
+scegfx_sampler_t*
+scegfx_context_opengl_create_sampler(scegfx_context_t* super,
+                                     scegfx_allocator_t* allocator)
+{
+  assert(super->initialized);
+  scegfx_sampler_t* sampler = NULL;
+  if (allocator == NULL)
+    sampler = malloc(sizeof(scegfx_sampler_opengl_t));
+  else
+    sampler = allocator->allocator_callback(
+      NULL, sizeof(scegfx_sampler_opengl_t), allocator->user_data);
+  memset(sampler, 0, sizeof(scegfx_sampler_opengl_t));
+
+  sampler->api_vtable = &scegfx_sampler_api_vtable_opengl;
+  sampler->context = super;
+
+  return sampler;
+}
+
+void
+scegfx_context_opengl_destroy_sampler(scegfx_context_t* this,
+                                      scegfx_sampler_t* sampler,
+                                      scegfx_allocator_t* allocator)
+{
+  assert(this->initialized);
+  if (allocator == NULL) {
+    free(sampler);
+  } else {
+    allocator->allocator_callback(sampler, 0, allocator->user_data);
   }
 }
 

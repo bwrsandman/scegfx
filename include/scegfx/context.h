@@ -21,6 +21,7 @@ typedef struct scegfx_image_view_t scegfx_image_view_t;
 typedef struct scegfx_mapped_device_memory_range_t
   scegfx_mapped_device_memory_range_t;
 typedef struct scegfx_fence_t scegfx_fence_t;
+typedef struct scegfx_sampler_t scegfx_sampler_t;
 typedef struct scegfx_semaphore_t scegfx_semaphore_t;
 typedef struct scegfx_swapchain_t scegfx_swapchain_t;
 
@@ -119,6 +120,12 @@ typedef struct scegfx_context_api_vtable_t
   void (*destroy_image_view)(scegfx_context_t* this,
                              scegfx_image_view_t* view,
                              scegfx_allocator_t* allocator);
+
+  scegfx_sampler_t* (*create_sampler)(scegfx_context_t* this,
+                                      scegfx_allocator_t* allocator);
+  void (*destroy_sampler)(scegfx_context_t* this,
+                          scegfx_sampler_t* sampler,
+                          scegfx_allocator_t* allocator);
 
   bool (*make_current)(scegfx_context_t* this);
 } scegfx_context_api_vtable_t;
